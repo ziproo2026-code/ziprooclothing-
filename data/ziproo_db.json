@@ -1,0 +1,760 @@
+{
+  "admins": [
+    {
+      "id": "usr_admin_1",
+      "username": "rohithsharma",
+      "name": "Rohith Sharma (Founder & Creative Director)",
+      "role": "Founder & Creative Director",
+      "salt": "f7843e1c96807784f4642a487ad438e7",
+      "hash": "26a4a6b6c0f98a0e44c44de34daa2d413558eb7db1c0a02b907810361aa3dfe7d4f21faca1a5924377a84c5141fd41bd7e30f0f6a34701f5e59a90833b5325f4",
+      "lastLogin": "2026-10-02T10:02:36.726Z"
+    },
+    {
+      "id": "usr_admin_2",
+      "username": "ranjithkumar",
+      "name": "Ranjith Kumar (Co-founder of ZIPROO)",
+      "role": "Co-founder of ZIPROO",
+      "salt": "aadb5780dcd4f1e8b2b71ff1ab68568c",
+      "hash": "58a63b2f30bfcd24973863a050d8c65b8ae29bb4ca148d0447c0bd83af18eba55a3866390b26ba1e5f550cd114b014fa0c7898ab56d96415c77e4f23ef8f57ed",
+      "lastLogin": "2026-10-02T09:48:34.247Z"
+    },
+    {
+      "id": "usr_admin_1790687831438",
+      "username": "atelier_lead",
+      "name": "Vikram Atelier",
+      "role": "Operations & Atelier Lead",
+      "salt": "d3914aa7434dbdb03391ffe0cd690412",
+      "hash": "422b7f7b3e4d6786b42b2cd76f47dfc996fc736706492e886c9c4a19ef79f1efdf547db0b8fd2faa9595972f508b760b88b4452a0c1e42df2e36508d54376eaa",
+      "lastLogin": "2026-09-29T13:17:11.438Z"
+    }
+  ],
+  "settings": {
+    "brandName": "ZIPROO FASHION",
+    "tagline": "CREATE YOUR IDENTITY",
+    "secondarySlogan": "DON'T FOLLOW THE RULES. CREATE IT.",
+    "email": "ziproo2026@gmail.com",
+    "adminNotificationEmail": "ziprooclothing@gmail.com",
+    "instagram": "@_ziproo",
+    "facebook": "ZIPROO Official",
+    "youtube": "ZIPROO",
+    "announcementMessages": [
+      "ZIPROO — CREATE YOUR IDENTITY",
+      "DON'T FOLLOW THE RULES. CREATE IT.",
+      "NEW ERA, NEW IDENTITY · EST. 2026",
+      "SHOP THE LATEST DROP · ALL INDIA EXPRESS SHIPPING",
+      "OVERSIZED STREETWEAR ARCHITECTURE"
+    ],
+    "currencySymbol": "₹",
+    "freeShippingThreshold": 1999,
+    "onlineReceivingPortal": {
+      "enabled": true,
+      "upiId": "ziproo@upi",
+      "merchantName": "ZIPROO APPAREL ATELIER",
+      "instructions": "Pay directly via UPI (GPay / PhonePe / Paytm / BHIM) to UPI ID: ziproo@upi or scan the official atelier QR code. Submit your 12-digit UTR / Transaction Reference ID during checkout.",
+      "bankAccountDetails": "Account Name: ZIPROO CLOTHING | Bank: HDFC Bank | A/C No: 50200089202611 | IFSC: HDFC0001234"
+    },
+    "domain": "ziproofashion.com"
+  },
+  "products": [
+    {
+      "id": "prod_1",
+      "name": "VORTEX 01 OVERSIZED TEE",
+      "category": "oversized-t-shirts",
+      "price": 1499,
+      "originalPrice": 1999,
+      "description": "Ultra-heavyweight 280 GSM combed jersey with custom boxy architectural silhouette. Screen-printed ZIPROO typographic monogram at chest, silicone wash for silky hand-feel, and reinforced double-needle neck ribbing.",
+      "fabricDetails": "100% Organic Combed Heavy Cotton · 280 GSM · Pre-shrunk Boxy Fit",
+      "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+      "isNewLaunch": true,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "stockCount": 37,
+      "rating": 5,
+      "reviewsCount": 3,
+      "reviews": [
+        {
+          "id": "rev_1790614666700_dz9",
+          "productId": "prod_1",
+          "customerName": "Rohith",
+          "rating": 5,
+          "comment": "Incredible fit and feel!",
+          "date": "2026-09-28",
+          "verifiedPurchase": true
+        },
+        {
+          "id": "rev_1",
+          "productId": "prod_1",
+          "customerName": "Aarav Mehta",
+          "rating": 5,
+          "comment": "The 280 GSM cotton is phenomenal. Drops cleanly on the shoulders without wrinkling. The purple monogram is subtle and high-grade.",
+          "date": "2026-09-24",
+          "verifiedPurchase": true
+        },
+        {
+          "id": "rev_2",
+          "productId": "prod_1",
+          "customerName": "Karan Singhania",
+          "rating": 5,
+          "comment": "Best oversized tee in India hands down. Fits boxy, heavyweight collar ribbing does not sag after wash.",
+          "date": "2026-09-26",
+          "verifiedPurchase": true
+        }
+      ],
+      "createdAt": "2026-09-20T10:00:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 37,
+      "productLink": "/?product=prod_1",
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 1338.39,
+      "gstAmount": 160.61
+    },
+    {
+      "id": "prod_2",
+      "name": "SHADOW MONOLITH HEAVY HOODIE",
+      "category": "hoodies",
+      "price": 3499,
+      "originalPrice": 4299,
+      "description": "The definitive ZIPROO outerwear statement. Crafted from 480 GSM diagonal french terry with deep double-layered storm hood, custom matte gunmetal hardware, and concealed side-seam stash pockets.",
+      "fabricDetails": "100% French Terry Cotton · 480 GSM · Dropped Shoulder Box Cut",
+      "image": "/src/assets/images/ziproo_product_hoodie_1790610642709.jpg",
+      "isNewLaunch": true,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stockCount": 28,
+      "rating": 5,
+      "reviewsCount": 21,
+      "reviews": [
+        {
+          "id": "rev_3",
+          "productId": "prod_2",
+          "customerName": "Devansh Verma",
+          "rating": 5,
+          "comment": "480 GSM French Terry feels like luxury armor. Hood holds its shape perfectly. Worth every rupee.",
+          "date": "2026-09-25",
+          "verifiedPurchase": true
+        }
+      ],
+      "createdAt": "2026-09-22T14:30:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 28,
+      "productLink": "/?product=prod_2",
+      "gstRate": 12,
+      "hsnCode": "6110",
+      "taxInclusive": true,
+      "basePrice": 3124.11,
+      "gstAmount": 374.89
+    },
+    {
+      "id": "prod_3",
+      "name": "CYBER-TACTICAL CARGO PANTS",
+      "category": "pants",
+      "price": 2899,
+      "originalPrice": 3499,
+      "description": "Engineered utility trousers featuring 6 waterproof zippered gusset pockets, articulated knee darts for unrestricted motion, and adjustable toggle ankles for convertible wide-leg or tapered styling.",
+      "fabricDetails": "High-density Matte Ripstop Nylon Blend · Teflon DWR Coated · Water Repellent",
+      "image": "/src/assets/images/ziproo_product_cargo_1790610670701.jpg",
+      "isNewLaunch": false,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stockCount": 35,
+      "rating": 4.8,
+      "reviewsCount": 11,
+      "reviews": [
+        {
+          "id": "rev_4",
+          "productId": "prod_3",
+          "customerName": "Vikram Joshi",
+          "rating": 5,
+          "comment": "Tactical cargo perfection. Waterproof zippers and knee articulation make it effortless to style with chunky kicks.",
+          "date": "2026-09-22",
+          "verifiedPurchase": true
+        }
+      ],
+      "createdAt": "2026-09-18T09:15:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 35,
+      "productLink": "/?product=prod_3",
+      "gstRate": 12,
+      "hsnCode": "6203",
+      "taxInclusive": true,
+      "basePrice": 2588.39,
+      "gstAmount": 310.61
+    },
+    {
+      "id": "prod_4",
+      "name": "NIGHTFALL MODULAR OVERSHIRT",
+      "category": "shirts",
+      "price": 2199,
+      "originalPrice": 2699,
+      "description": "Architectural short-sleeve workwear overshirt with laser-cut ventilation eyelets, matte industrial snap closures, and structural chest flap pockets. Perfect as an outer layer over our oversized tees.",
+      "fabricDetails": "Structured Cotton-Twill Blend · 240 GSM · Industrial Matte Snaps",
+      "image": "/src/assets/images/ziproo_product_shirt_1790610686944.jpg",
+      "isNewLaunch": false,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "stockCount": 20,
+      "rating": 4.9,
+      "reviewsCount": 8,
+      "reviews": [],
+      "createdAt": "2026-09-15T11:45:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 20,
+      "productLink": "/?product=prod_4",
+      "gstRate": 12,
+      "hsnCode": "6205",
+      "taxInclusive": true,
+      "basePrice": 1963.39,
+      "gstAmount": 235.61
+    },
+    {
+      "id": "prod_5",
+      "name": "IDENTITY MATRIX ACID TEE",
+      "category": "t-shirts",
+      "price": 1299,
+      "originalPrice": 1699,
+      "description": "Hand-distressed mineral acid wash tee featuring subtle iridescent purple foil accents. Each garment undergoes a bespoke washing treatment rendering no two pieces identical.",
+      "fabricDetails": "100% Ring-Spun Cotton · 220 GSM · Mineral Acid Washed",
+      "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+      "isNewLaunch": false,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stockCount": 50,
+      "rating": 4.7,
+      "reviewsCount": 19,
+      "reviews": [],
+      "createdAt": "2026-09-10T16:20:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 50,
+      "productLink": "/?product=prod_5",
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 1159.82,
+      "gstAmount": 139.18
+    },
+    {
+      "id": "prod_6",
+      "name": "ECLIPSE BOX CUT OVERSIZED TEE",
+      "category": "oversized-t-shirts",
+      "price": 1599,
+      "originalPrice": 1999,
+      "description": "Exaggerated dropped shoulders with a cropped architectural hemline. Screen-printed with the ZIPROO manifesto \"DON'T FOLLOW THE RULES. CREATE IT.\" across the upper back shoulders.",
+      "fabricDetails": "Premium Heavy Cotton Jersey · 290 GSM · Custom Boxy Fit",
+      "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+      "isNewLaunch": true,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stockCount": 30,
+      "rating": 4.9,
+      "reviewsCount": 16,
+      "reviews": [],
+      "createdAt": "2026-09-24T12:00:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 30,
+      "productLink": "/?product=prod_6",
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 1427.68,
+      "gstAmount": 171.32
+    },
+    {
+      "id": "prod_7",
+      "name": "ARCHITECT HYBRID UTILITY PANTS",
+      "category": "pants",
+      "price": 2799,
+      "originalPrice": 3299,
+      "description": "Tailored urban trousers with integrated webbing magnetic buckle belt, dual side cargo bellows, and purple contrast bartack stitching at all high-stress tension points.",
+      "fabricDetails": "Technical Stretch Twill · 98% Cotton 2% Spandex · Magnetic Webbing Belt",
+      "image": "/src/assets/images/ziproo_product_cargo_1790610670701.jpg",
+      "isNewLaunch": true,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stockCount": 22,
+      "rating": 4.8,
+      "reviewsCount": 9,
+      "reviews": [],
+      "createdAt": "2026-09-25T15:30:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 22,
+      "productLink": "/?product=prod_7",
+      "gstRate": 12,
+      "hsnCode": "6203",
+      "taxInclusive": true,
+      "basePrice": 2499.11,
+      "gstAmount": 299.89
+    },
+    {
+      "id": "prod_8",
+      "name": "NEO-VIOLET ZIP HOODIE",
+      "category": "hoodies",
+      "price": 3699,
+      "originalPrice": 4499,
+      "description": "Full-zip luxury streetwear hoodie with two-way heavy YKK zipper, internal purple piping, and embroidered ZIPROO tonal insignia along the left cuff.",
+      "fabricDetails": "460 GSM Heavy French Terry Cotton · YKK 2-Way Zipper · Tonal Embroidery",
+      "image": "/src/assets/images/ziproo_product_hoodie_1790610642709.jpg",
+      "isNewLaunch": true,
+      "inStock": true,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "stockCount": 18,
+      "rating": 5,
+      "reviewsCount": 12,
+      "reviews": [],
+      "createdAt": "2026-09-26T08:00:00.000Z",
+      "shippingCharge": 0,
+      "piecesAvailable": 18,
+      "productLink": "/?product=prod_8",
+      "gstRate": 12,
+      "hsnCode": "6110",
+      "taxInclusive": true,
+      "basePrice": 3302.68,
+      "gstAmount": 396.32
+    }
+  ],
+  "updates": [
+    {
+      "id": "upd_4",
+      "title": "ZIPROO 2026 Debut Drop Officially Announced",
+      "category": "Product Launch",
+      "content": "Today marks the official reveal of ZIPROO Capsule 01. Founded with an uncompromising vision: Don't follow the rules. Create it. Our flagship 480 GSM hoodies and engineered utilitarian cargo pants are now accessible across India and globally.",
+      "date": "2026-09-28",
+      "author": "Rohith Sharma (Founder)",
+      "createdAt": "2026-09-28T07:30:00.000Z"
+    },
+    {
+      "id": "upd_3",
+      "title": "Behind the Atelier: Sourcing 480 GSM French Terry",
+      "category": "Behind The Scenes",
+      "content": "After six months of meticulous prototyping across specialized textile mills, we selected an unbrushed diagonal cotton terry. It holds the structural silhouette of our hoodies without slouching, yet delivers cloud-soft interior comfort.",
+      "date": "2026-09-25",
+      "author": "Ranjith Kumar (Co-founder)",
+      "createdAt": "2026-09-25T14:15:00.000Z"
+    },
+    {
+      "id": "upd_2",
+      "title": "Identity Series 01 Prototype Fitting & Runway Preview",
+      "category": "New Design",
+      "content": "Completed sample fittings for our upcoming Nightfall Modular Overshirt and Architect Utility Pants in our central design studio. Tension testing on the magnetic Fidlock buckles passed with zero defect tolerance.",
+      "date": "2026-09-22",
+      "author": "Ranjith Kumar (Co-founder)",
+      "createdAt": "2026-09-22T16:00:00.000Z"
+    },
+    {
+      "id": "upd_1",
+      "title": "All-India Express Logistics Network Activated",
+      "category": "Progress",
+      "content": "To honor our commitment to premium streetwear enthusiasts, we have secured express courier lanes with end-to-end SMS tracking and guaranteed dispatch within 24 hours.",
+      "date": "2026-09-18",
+      "author": "Ranjith Kumar (Co-founder)",
+      "createdAt": "2026-09-18T10:00:00.000Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_1790933920919",
+      "orderNumber": "ZIP-2026-2284",
+      "customerName": "rohith",
+      "mobileNumber": "7010129566",
+      "email": "rohithsharmak2528@gmail.com",
+      "completeAddress": "mahendra engineering college",
+      "city": "salem",
+      "state": "Tamil Nadu",
+      "pinCode": "636001",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "M",
+          "color": "Deep Onyx Black",
+          "quantity": 2,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg"
+        }
+      ],
+      "subtotal": 2998,
+      "shipping": 0,
+      "totalAmount": 2998,
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Order Confirmed",
+      "createdAt": "2026-10-02T09:38:40.919Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "rohithsharmak2528@gmail.com",
+        "customerSmsSent": true,
+        "customerSmsRecipient": "7010129566",
+        "statusHistory": [
+          {
+            "status": "Order Confirmed",
+            "timestamp": "2026-10-02T09:38:40.919Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1790933920932_rp8y",
+            "event": "order_confirmed",
+            "recipient": "rohithsharmak2528@gmail.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-2284 - Create Your Identity",
+            "timestamp": "2026-10-02T09:38:40.932Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-02T09:38:40.932Z",
+        "adminEmailTimestamp": "2026-10-02T09:38:40.933Z",
+        "customerSmsTimestamp": "2026-10-02T09:38:40.935Z",
+        "customerSmsContent": "Hi rohith! Thank you for ordering from ZIPROO. Your order #ZIP-2026-2284 (Items: VORTEX 01 OVERSIZED TEE (M) x2, Total: ₹2,998) has been received successfully. We'll keep you updated on shipping. Thank you for choosing ZIPROO!"
+      }
+    },
+    {
+      "id": "ord_1790933503341",
+      "orderNumber": "ZIP-2026-8838",
+      "customerName": "Rohith Sharma",
+      "mobileNumber": "9876543210",
+      "email": "rohithsharmak2528@gmail.com",
+      "completeAddress": "42, Brigade Road, Ashok Nagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560001",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Deep Onyx Black",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Order Confirmed",
+      "createdAt": "2026-10-02T09:31:43.341Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "rohithsharmak2528@gmail.com",
+        "customerSmsSent": true,
+        "customerSmsRecipient": "9876543210",
+        "statusHistory": [
+          {
+            "status": "Order Confirmed",
+            "timestamp": "2026-10-02T09:31:43.341Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1790933503355_kz2n",
+            "event": "order_confirmed",
+            "recipient": "rohithsharmak2528@gmail.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-8838 - Create Your Identity",
+            "timestamp": "2026-10-02T09:31:43.355Z",
+            "success": true
+          },
+          {
+            "id": "eml_1790933522162_iqz7",
+            "event": "order_confirmed",
+            "recipient": "rohithsharmak2528@gmail.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-8838 - Create Your Identity",
+            "timestamp": "2026-10-02T09:32:02.162Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-02T09:32:02.162Z",
+        "adminEmailTimestamp": "2026-10-02T09:31:43.356Z",
+        "customerSmsTimestamp": "2026-10-02T09:31:43.357Z",
+        "customerSmsContent": "Hi Rohith Sharma! Thank you for ordering from ZIPROO. Your order #ZIP-2026-8838 (Items: VORTEX 01 OVERSIZED TEE (L) x1, Total: ₹1,598) has been received successfully. We'll keep you updated on shipping. Thank you for choosing ZIPROO!"
+      }
+    },
+    {
+      "id": "ord_1790787152105",
+      "orderNumber": "ZIP-2026-8281",
+      "customerName": "rohith",
+      "mobileNumber": "7010129566",
+      "email": "rohithsharmak2528@gmail.com",
+      "completeAddress": "mahendra engineering college",
+      "city": "namakal",
+      "state": "Tamil Nadu",
+      "pinCode": "601897",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "M",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-09-30T16:52:32.105Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerSmsSent": true,
+        "customerSmsRecipient": "7010129566",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-09-30T16:52:32.105Z",
+            "notificationSent": true,
+            "note": "Order placed by customer and confirmed in atelier system"
+          }
+        ],
+        "adminEmailTimestamp": "2026-09-30T16:52:32.118Z",
+        "customerSmsTimestamp": "2026-09-30T16:52:32.119Z",
+        "customerSmsContent": "Hi rohith! Thank you for ordering from ZIPROO. Your order #ZIP-2026-8281 (Items: VORTEX 01 OVERSIZED TEE (M) x1, Total: ₹1,598) has been received successfully. We'll keep you updated on shipping. Thank you for choosing ZIPROO!"
+      }
+    },
+    {
+      "id": "ord_1790785093143",
+      "orderNumber": "ZIP-2026-5921",
+      "customerName": "Aarav Sharma",
+      "mobileNumber": "+91 98450 12345",
+      "email": "aarav.sharma@example.com",
+      "completeAddress": "Flat 501, Prestige Palms, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560066",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "paymentMethod": "online_portal",
+      "paymentStatus": "Processing",
+      "transactionReference": "UPI998877665544",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-09-30T16:18:13.143Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerSmsSent": true,
+        "customerSmsRecipient": "+91 98450 12345",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-09-30T16:18:13.143Z",
+            "notificationSent": true,
+            "note": "Order placed by customer and confirmed in atelier system"
+          }
+        ],
+        "adminEmailTimestamp": "2026-09-30T16:18:13.184Z",
+        "customerSmsTimestamp": "2026-09-30T16:18:13.185Z",
+        "customerSmsContent": "Hi Aarav Sharma! Thank you for ordering from ZIPROO. Your order #ZIP-2026-5921 (Items: VORTEX 01 OVERSIZED TEE (L) x1, Total: ₹1,598) has been received successfully. We'll keep you updated on shipping. Thank you for choosing ZIPROO!"
+      }
+    },
+    {
+      "id": "ord_101",
+      "orderNumber": "ZIP-2026-8901",
+      "customerName": "Marcus Cole",
+      "mobileNumber": "+91 98765 43210",
+      "email": "marcus.cole@example.com",
+      "completeAddress": "Flat 402, Skyline Residency, 12th Main Road, Indiranagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560038",
+      "items": [
+        {
+          "productId": "prod_2",
+          "productName": "SHADOW MONOLITH HEAVY HOODIE",
+          "category": "hoodies",
+          "size": "L",
+          "quantity": 1,
+          "price": 3499,
+          "image": "/src/assets/images/ziproo_product_hoodie_1790610642709.jpg"
+        },
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "XL",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg"
+        }
+      ],
+      "subtotal": 4998,
+      "shipping": 0,
+      "totalAmount": 4998,
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-09-27T19:30:00.000Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "adminEmailTimestamp": "2026-09-27T19:30:05.000Z",
+        "customerSmsSent": true,
+        "customerSmsRecipient": "+91 98765 43210",
+        "customerSmsTimestamp": "2026-09-27T19:30:08.000Z",
+        "customerSmsContent": "Hi Marcus Cole! Thank you for ordering from ZIPROO. Your order #ZIP-2026-8901 has been received successfully. We'll keep you updated. Thank you for choosing ZIPROO!"
+      }
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust_1790787152712",
+      "name": "rohith",
+      "email": "rohithsharmak2528@gmail.com",
+      "phone": "7010129566",
+      "address": "mahendra engineering college",
+      "city": "salem",
+      "state": "Tamil Nadu",
+      "pinCode": "636001",
+      "location": "salem, Tamil Nadu",
+      "registeredAt": "2026-09-30T16:52:32.712Z",
+      "lastLoginAt": "2026-10-02T09:38:41.382Z",
+      "totalOrders": 0
+    },
+    {
+      "id": "cust_1790687805733",
+      "name": "Rohith Test",
+      "email": "919888877777@ziproo-customer.com",
+      "phone": "+91 98888 77777",
+      "address": "123 Fashion Blvd",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560001",
+      "location": "Indiranagar, Bengaluru",
+      "registeredAt": "2026-09-29T13:16:45.733Z",
+      "lastLoginAt": "2026-09-29T13:16:45.733Z",
+      "totalOrders": 0
+    },
+    {
+      "id": "cust_1",
+      "name": "Marcus Cole",
+      "email": "marcus.cole@example.com",
+      "phone": "+91 98765 43210",
+      "address": "Flat 402, Skyline Residency, 12th Main Road, Indiranagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560038",
+      "location": "Indiranagar, Bengaluru, Karnataka",
+      "registeredAt": "2026-09-26T10:00:00.000Z",
+      "lastLoginAt": "2026-09-28T14:30:00.000Z",
+      "totalOrders": 1
+    },
+    {
+      "id": "cust_2",
+      "name": "Ananya Deshmukh",
+      "email": "ananya.deshmukh@gmail.com",
+      "phone": "+91 98201 12345",
+      "address": "Villa 14, Palm Grove Enclave, Bandra West",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pinCode": "400050",
+      "location": "Bandra West, Mumbai, Maharashtra",
+      "registeredAt": "2026-09-27T08:15:00.000Z",
+      "lastLoginAt": "2026-09-29T02:10:00.000Z",
+      "totalOrders": 2
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_1790687835338_3ev",
+      "name": "Siddharth Rao",
+      "email": "sid.rao@gmail.com",
+      "phone": "+91 91234 56789",
+      "location": "Koramangala, Bengaluru",
+      "subject": "Custom Oversized Sizing",
+      "message": "Can I request custom sleeves on the heavy hoodie?",
+      "createdAt": "2026-09-29T13:17:15.338Z",
+      "status": "unread"
+    },
+    {
+      "id": "msg_1",
+      "name": "Kabir Singhania",
+      "email": "kabir.s@gmail.com",
+      "phone": "+91 99887 76655",
+      "location": "DLF Phase 5, Gurugram, Haryana",
+      "subject": "Bespoke Sizing & Wholesale Capsule Inquiries",
+      "message": "Hello ZIPROO Atelier Team, I am deeply impressed by your 480 GSM hoodie cuts and architectural silhouettes. We are interested in curating a private showroom presentation in Delhi NCR. Could you share wholesale terms?",
+      "createdAt": "2026-09-28T11:45:00.000Z",
+      "status": "unread"
+    },
+    {
+      "id": "msg_2",
+      "name": "Rhea Sen",
+      "email": "rhea.sen@outlook.com",
+      "phone": "+91 98300 54321",
+      "location": "Park Street, Kolkata, West Bengal",
+      "subject": "Drop 01 Restock Notification Request",
+      "message": "Will the Vortex 01 oversized tee in size XL be restocked soon? Love the fabric weight.",
+      "createdAt": "2026-09-27T16:20:00.000Z",
+      "status": "read"
+    }
+  ]
+}

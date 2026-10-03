@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" fill="none">
+  <!-- Circular Badge with negative space Z -->
+  <g id="badge">
+    <circle cx="110" cy="120" r="90" fill="#141416" stroke="#27272a" stroke-width="2"/>
+    <circle cx="110" cy="120" r="90" stroke="#a855f7" stroke-width="2" stroke-opacity="0.6"/>
+    <!-- Cutout / White Z -->
+    <path d="M54 68 H166 V88 L98 152 H170 V172 H52 V152 L124 88 H54 Z" fill="#ffffff" />
+  </g>
+  
+  <!-- Capital Wordmark "ZIPROO" -->
+  <text x="230" y="145" fill="#ffffff" font-family="'Syncopate', 'Syne', sans-serif" font-size="70" font-weight="800" letter-spacing="0.06em">ZIPROO</text>
+  
+  <!-- "since 2026" subtitle -->
+  <text x="565" y="185" text-anchor="end" fill="#a1a1aa" font-family="'Space Grotesk', sans-serif" font-size="20" font-weight="600" letter-spacing="0.08em">since 2026</text>
+  <circle cx="578" cy="178" r="4" fill="#a855f7" />
+</svg>

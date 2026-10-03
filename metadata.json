@@ -1,0 +1,7 @@
+{
+  "name": "ZIPROO — Create Your Identity",
+  "description": "Modern, premium streetwear brand established in 2026. Create your identity with exclusive oversized t-shirts, hoodies, shirts, and utilitarian pants.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
