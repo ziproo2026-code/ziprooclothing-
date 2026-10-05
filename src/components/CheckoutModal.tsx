@@ -15,6 +15,7 @@ import {
   User,
   Edit3,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 
 interface CheckoutModalProps {
@@ -24,6 +25,7 @@ interface CheckoutModalProps {
   settings?: StoreSettings;
   onOrderCompleted: (order: Order) => void;
   currentCustomer?: Customer | null;
+  customerToken?: string | null;
   onOpenCustomerLogin?: () => void;
 }
 
@@ -67,6 +69,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   settings,
   onOrderCompleted,
   currentCustomer,
+  customerToken,
   onOpenCustomerLogin,
 }) => {
   // Required customer details form states
@@ -126,10 +129,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Stock status check: identify any out-of-stock items in cart
+  const outOfStockItems = items.filter(
+    (it) => !it.product.inStock || (it.product.piecesAvailable !== undefined && it.product.piecesAvailable <= 0)
+  );
+  const hasOutOfStockItems = outOfStockItems.length > 0;
+
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const freeThreshold = settings?.freeShippingThreshold || 1999;
   const shipping = subtotal >= freeThreshold ? 0 : 99; // ₹99 nominal delivery
   const total = subtotal + shipping;
+
+  // Calculate GST & Tax amounts
+  const estimatedTaxDetails = items.reduce(
+    (acc, it) => {
+      const prod = it.product;
+      const rate = prod.gstApplicable !== false ? (prod.gstRate !== undefined ? Number(prod.gstRate) : (prod.price >= 1000 ? 12 : 5)) : 0;
+      const itemTotal = prod.price * it.quantity;
+      const isInclusive = prod.taxInclusive !== false;
+      let base = itemTotal;
+      let tax = 0;
+      if (rate > 0) {
+        if (isInclusive) {
+          base = Math.round((itemTotal / (1 + rate / 100)) * 100) / 100;
+          tax = Math.round((itemTotal - base) * 100) / 100;
+        } else {
+          tax = Math.round((itemTotal * (rate / 100)) * 100) / 100;
+        }
+      }
+      acc.taxableAmount += base;
+      acc.totalTax += tax;
+      return acc;
+    },
+    { taxableAmount: 0, totalTax: 0 }
+  );
 
   const portalSettings = settings?.onlineReceivingPortal || {
     enabled: true,
@@ -141,6 +174,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Block checkout if cart has out-of-stock items
+    if (hasOutOfStockItems) {
+      setErrorMsg(
+        `Cannot complete checkout: "${outOfStockItems.map((it) => it.product.name).join(', ')}" is currently OUT OF STOCK. Please remove it from your cart to proceed.`
+      );
+      return;
+    }
 
     // Strict validation of customer details
     if (!customerName.trim() || !mobileNumber.trim() || !email.trim() || !completeAddress.trim() || !city.trim() || !state.trim() || !pinCode.trim()) {
@@ -182,9 +223,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         })),
       };
 
+      const token = customerToken || localStorage.getItem('ziproo_customer_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(orderPayload),
       });
 
@@ -255,7 +302,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </p>
             </div>
 
-            {/* Notification dispatch badges confirming real email to admin and SMS to customer */}
+            {/* Notification dispatch badges confirming real email to admin and customer updates */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
               {/* Admin Email Badge */}
               <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 space-y-1">
@@ -268,7 +315,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </p>
                 <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-mono font-medium">
                   <CheckCircle2 className="w-3 h-3" />
-                  <span>Complete order & customer details transmitted</span>
+                  <span>Complete order & customer details transmitted via Email</span>
                 </div>
               </div>
 
@@ -279,11 +326,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span>Customer SMS Notification</span>
                 </div>
                 <p className="text-[11px] text-zinc-600">
-                  Transmitted to: <strong className="text-zinc-900 font-mono">{completedOrder.mobileNumber}</strong>
+                  Registered Mobile: <strong className="text-zinc-900 font-mono">{completedOrder.mobileNumber}</strong>
                 </p>
-                <div className="text-[10px] text-emerald-600 flex items-center gap-1 font-mono font-medium">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Confirmation SMS sent to your mobile</span>
+                <div className="text-[10px] text-zinc-500 flex items-center gap-1 font-mono">
+                  <Clock className="w-3 h-3 text-[#7c3aed]" />
+                  <span>Email confirmation active; SMS pending MSG91 key</span>
                 </div>
               </div>
             </div>
@@ -320,8 +367,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span className="text-emerald-700 font-bold">{completedOrder.transactionReference}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-1 text-sm font-bold">
-                <span className="text-zinc-700">Total Charged:</span>
+
+              {/* Tax & GST Information stored with order */}
+              {completedOrder.taxSummary && (
+                <div className="pt-2 border-t border-zinc-200 space-y-1 font-mono text-[11px] text-zinc-600">
+                  <div className="flex justify-between">
+                    <span>Taxable Base (Pre-Tax):</span>
+                    <span className="text-zinc-900">₹{completedOrder.taxSummary.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Central GST (CGST):</span>
+                    <span className="text-zinc-900">₹{completedOrder.taxSummary.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>State GST (SGST):</span>
+                    <span className="text-zinc-900">₹{completedOrder.taxSummary.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-purple-700">
+                    <span>Total Applicable GST:</span>
+                    <span>₹{completedOrder.taxSummary.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between pt-1 text-sm font-bold border-t border-zinc-200">
+                <span className="text-zinc-700">Final Total Amount:</span>
                 <span className="font-mono text-zinc-950 text-base">₹{completedOrder.totalAmount.toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -667,29 +737,63 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                  {items.map((it, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-zinc-700">
-                      <span>
-                        {it.product.name} <strong className="text-[#7c3aed]">[{it.size}]</strong> x{it.quantity}
-                      </span>
-                      <span className="font-mono text-zinc-950 font-semibold">₹{(it.product.price * it.quantity).toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
+                  {items.map((it, idx) => {
+                    const isItemOutOfStock = !it.product.inStock || (it.product.piecesAvailable !== undefined && it.product.piecesAvailable <= 0);
+                    return (
+                      <div key={idx} className="flex justify-between items-center text-zinc-700">
+                        <div className="flex items-center gap-1.5 truncate pr-2">
+                          <span className="truncate">{it.product.name}</span>
+                          <strong className="text-[#7c3aed]">[{it.size}]</strong>
+                          <span>x{it.quantity}</span>
+                          {isItemOutOfStock && (
+                            <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[9px] font-mono font-bold uppercase shrink-0">
+                              OUT OF STOCK
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-zinc-950 font-semibold shrink-0">₹{(it.product.price * it.quantity).toLocaleString('en-IN')}</span>
+                      </div>
+                    );
+                  })}
                 </div>
+
+                {/* Out of Stock Warning Banner */}
+                {hasOutOfStockItems && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                      <span>OUT OF STOCK ITEMS IN BAG:</span>
+                    </div>
+                    <ul className="list-disc list-inside text-[11px] pl-1 space-y-0.5 text-red-800">
+                      {outOfStockItems.map((it, idx) => (
+                        <li key={idx}>
+                          <strong>{it.product.name}</strong> [{it.size}] is currently OUT OF STOCK.
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[10px] text-red-600 pt-0.5">
+                      Please remove out of stock items from your cart before confirming your order.
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-zinc-200 space-y-1">
                   <div className="flex justify-between text-zinc-600">
-                    <span>Subtotal</span>
-                    <span className="font-mono text-zinc-900 font-semibold">₹{subtotal.toLocaleString('en-IN')}</span>
+                    <span>Taxable Base (Pre-Tax):</span>
+                    <span className="font-mono text-zinc-900">₹{estimatedTaxDetails.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-zinc-600">
-                    <span>All-India Express Delivery</span>
+                    <span>Applicable GST (CGST + SGST):</span>
+                    <span className="font-mono text-purple-700 font-semibold">₹{estimatedTaxDetails.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-600">
+                    <span>All-India Express Delivery:</span>
                     <span className="font-mono text-zinc-900">
                       {shipping === 0 ? <strong className="text-emerald-700">FREE</strong> : `₹${shipping}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-zinc-950 pt-2 border-t border-zinc-200">
-                    <span>Total Amount</span>
+                    <span>Final Total Customer Price:</span>
                     <span className="font-mono text-[#7c3aed] text-base">₹{total.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
@@ -698,15 +802,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {/* Security reassurance */}
               <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
                 <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Customer data encrypted. Real-time email to ziprooclothing@gmail.com & SMS dispatch.</span>
+                <span>Customer data encrypted. Real-time email notification to ziprooclothing@gmail.com</span>
               </div>
 
               <button
                 type="submit"
-                disabled={isProcessing}
-                className="w-full py-4 text-xs font-bold uppercase tracking-widest text-white bg-black hover:bg-zinc-800 rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-50"
+                disabled={isProcessing || hasOutOfStockItems}
+                className={`w-full py-4 text-xs font-bold uppercase tracking-widest text-white rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-50 ${
+                  hasOutOfStockItems
+                    ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                    : 'bg-black hover:bg-zinc-800'
+                }`}
               >
-                {isProcessing ? 'Processing Order & Dispatching Notifications...' : `Confirm Order · ₹${total.toLocaleString('en-IN')}`}
+                {hasOutOfStockItems
+                  ? 'Cannot Checkout · Remove Out of Stock Items'
+                  : isProcessing
+                  ? 'Processing Order & Dispatching Notifications...'
+                  : `Confirm Order · ₹${total.toLocaleString('en-IN')}`}
               </button>
             </form>
           </div>

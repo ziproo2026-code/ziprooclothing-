@@ -98,6 +98,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, settings, onOpenTrac
                   </button>
                 </li>
               )}
+              <li>
+                <button
+                  onClick={() => onNavigate('seller')}
+                  className="text-zinc-800 hover:text-purple-700 font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <span>Seller Portal</span>
+                  <span className="text-[10px] font-mono uppercase bg-purple-100 border border-purple-200 px-1.5 py-0.5 rounded text-purple-800 font-bold">
+                    Seller
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onNavigate('admin')}
+                  className="hover:text-zinc-950 transition-colors text-xs text-zinc-500"
+                >
+                  Admin Portal
+                </button>
+              </li>
             </ul>
           </div>
 

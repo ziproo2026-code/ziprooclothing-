@@ -10,12 +10,13 @@ import {
   sendCustomerOrderSms,
   sendCustomerStatusUpdate,
   sendCustomerOrderEmail,
+  sendSellerOrderEmail,
   testBrevoEmailIntegration,
   testMsg91SmsIntegration,
   getMsg91Config,
   type EmailEvent,
 } from './src/server/notifications.js';
-import type { AdminUser, Product, CompanyUpdate, Order, ProductReview, Customer, CustomerMessage, OrderStatus } from './src/types/index.js';
+import type { AdminUser, Product, CompanyUpdate, Order, ProductReview, Customer, CustomerMessage, OrderStatus, Seller, OrderItem } from './src/types/index.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -30,6 +31,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/assets', express.static(path.resolve(process.cwd(), 'public/assets')));
 
 // Auth Middleware
 interface AuthenticatedRequest extends Request {
@@ -85,6 +87,57 @@ export function requireCustomer(req: AuthenticatedCustomerRequest, res: Response
   }
 
   req.customer = customer;
+  next();
+}
+
+// Seller Authentication Middleware
+export interface AuthenticatedSellerRequest extends Request {
+  seller?: Seller;
+}
+
+export function requireSeller(req: AuthenticatedSellerRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Authentication required. Please sign in to your Seller Portal.',
+      code: 'UNAUTHENTICATED'
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const decoded = verifyToken(token);
+  if (!decoded || !decoded.id) {
+    return res.status(401).json({
+      error: 'Invalid or expired seller session. Please sign in again.',
+      code: 'INVALID_TOKEN'
+    });
+  }
+
+  if (decoded.normalizedRole !== 'SELLER') {
+    return res.status(403).json({
+      error: 'Forbidden: Dedicated seller credentials required.',
+      code: 'FORBIDDEN_ROLE'
+    });
+  }
+
+  const db = loadDatabase();
+  const seller = (db.sellers || []).find((s) => s.id === decoded.id);
+  if (!seller) {
+    return res.status(401).json({
+      error: 'Seller account not found. Please contact administration.',
+      code: 'SELLER_NOT_FOUND'
+    });
+  }
+
+  if (seller.status === 'SUSPENDED') {
+    return res.status(403).json({
+      error: 'Your seller account has been suspended by administration.',
+      code: 'SELLER_SUSPENDED',
+      reason: seller.suspendedReason || 'Administrative suspension'
+    });
+  }
+
+  req.seller = seller;
   next();
 }
 
@@ -178,7 +231,17 @@ app.get('/api/products', (req: Request, res: Response) => {
   const db = loadDatabase();
   const { q, category, newLaunch } = req.query;
 
-  let filtered = [...db.products];
+  const suspendedSellerIds = new Set(
+    (db.sellers || []).filter((s) => s.status === 'SUSPENDED').map((s) => s.id)
+  );
+
+  let filtered = (db.products || []).filter((p) => {
+    // Hide products from suspended sellers
+    if (p.sellerId && suspendedSellerIds.has(p.sellerId)) return false;
+    // Hide products pending approval or rejected
+    if (p.approvalStatus && p.approvalStatus !== 'APPROVED') return false;
+    return true;
+  });
 
   if (category && category !== 'all') {
     filtered = filtered.filter((p) => p.category.toLowerCase() === (category as string).toLowerCase());
@@ -203,7 +266,34 @@ app.get('/api/products', (req: Request, res: Response) => {
 
 // POST /api/products (Admin only)
 app.post('/api/products', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-  const { name, category, price, originalPrice, description, fabricDetails, image, isNewLaunch, inStock, sizes, stockCount } = req.body;
+  const {
+    name,
+    category,
+    price,
+    originalPrice,
+    description,
+    fabricDetails,
+    image,
+    images,
+    isNewLaunch,
+    inStock,
+    sizes,
+    colors,
+    color,
+    gsm,
+    features,
+    careInstructions,
+    tags,
+    stockCount,
+    piecesAvailable,
+    shippingCharge,
+    gstApplicable,
+    gstRate,
+    hsnCode,
+    taxInclusive,
+    basePrice,
+    gstAmount,
+  } = req.body;
 
   if (!name || !category || price === undefined) {
     return res.status(400).json({ error: 'Name, category, and price are required' });
@@ -213,22 +303,61 @@ app.post('/api/products', requireAdmin, (req: AuthenticatedRequest, res: Respons
   const prodId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const autoProductLink = req.body.productLink || `${req.protocol}://${req.get('host')}/?product=${prodId}`;
 
+  // Process 3-4 images gallery
+  let processedImages: string[] = [];
+  if (Array.isArray(images) && images.length > 0) {
+    processedImages = images.filter((img) => typeof img === 'string' && img.trim().length > 0);
+  } else if (image) {
+    processedImages = [image];
+  } else {
+    processedImages = ['/src/assets/images/ziproo_product_tee_1790610656044.jpg'];
+  }
+
+  const primaryImage = image || processedImages[0] || '/src/assets/images/ziproo_product_tee_1790610656044.jpg';
+
+  const numPrice = Number(price);
+  const rate = gstRate !== undefined ? Number(gstRate) : (numPrice >= 1000 ? 12 : 5);
+  const isTaxInc = taxInclusive !== undefined ? Boolean(taxInclusive) : true;
+  let calcBasePrice = numPrice;
+  let calcGstAmount = 0;
+  if (rate > 0) {
+    if (isTaxInc) {
+      calcBasePrice = Math.round((numPrice / (1 + rate / 100)) * 100) / 100;
+      calcGstAmount = Math.round((numPrice - calcBasePrice) * 100) / 100;
+    } else {
+      calcGstAmount = Math.round((numPrice * (rate / 100)) * 100) / 100;
+    }
+  }
+
   const newProduct: Product = {
     id: prodId,
     name: name.trim(),
     category,
-    price: Number(price),
+    price: numPrice,
     originalPrice: originalPrice ? Number(originalPrice) : undefined,
     description: description || '',
     fabricDetails: fabricDetails || '',
-    image: image || '/src/assets/images/ziproo_product_tee_1790610656044.jpg',
+    image: primaryImage,
+    images: processedImages,
     isNewLaunch: Boolean(isNewLaunch),
     inStock: inStock !== undefined ? Boolean(inStock) : true,
     sizes: Array.isArray(sizes) && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'],
+    colors: Array.isArray(colors) ? colors : (color ? [color] : ['Deep Onyx Black']),
+    color: color || (Array.isArray(colors) && colors[0]) || 'Deep Onyx Black',
+    gsm: gsm || undefined,
+    features: Array.isArray(features) ? features : (features ? [features] : []),
+    careInstructions: careInstructions || 'Cold machine wash inside out. Do not tumble dry. Iron on reverse.',
+    tags: Array.isArray(tags) ? tags : [],
     stockCount: stockCount !== undefined ? Number(stockCount) : 50,
-    shippingCharge: req.body.shippingCharge !== undefined ? Number(req.body.shippingCharge) : 0,
-    piecesAvailable: req.body.piecesAvailable !== undefined ? Number(req.body.piecesAvailable) : (stockCount !== undefined ? Number(stockCount) : 100),
+    shippingCharge: shippingCharge !== undefined ? Number(shippingCharge) : 0,
+    piecesAvailable: piecesAvailable !== undefined ? Number(piecesAvailable) : (stockCount !== undefined ? Number(stockCount) : 100),
     productLink: autoProductLink,
+    gstApplicable: gstApplicable !== undefined ? Boolean(gstApplicable) : true,
+    gstRate: rate,
+    hsnCode: hsnCode ? String(hsnCode).trim() : '6109',
+    taxInclusive: isTaxInc,
+    basePrice: basePrice !== undefined ? Number(basePrice) : calcBasePrice,
+    gstAmount: gstAmount !== undefined ? Number(gstAmount) : calcGstAmount,
     rating: 5.0,
     reviewsCount: 0,
     reviews: [],
@@ -254,15 +383,50 @@ app.put('/api/products/:id', requireAdmin, (req: AuthenticatedRequest, res: Resp
   const current = db.products[index];
   const autoProductLink = req.body.productLink || current.productLink || `${req.protocol}://${req.get('host')}/?product=${current.id}`;
 
+  let processedImages = current.images || [current.image];
+  if (Array.isArray(req.body.images)) {
+    processedImages = req.body.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
+  }
+  const primaryImage = req.body.image || (processedImages.length > 0 ? processedImages[0] : current.image);
+
+  const numPrice = req.body.price !== undefined ? Number(req.body.price) : current.price;
+  const rate = req.body.gstRate !== undefined ? Number(req.body.gstRate) : (current.gstRate ?? (numPrice >= 1000 ? 12 : 5));
+  const isTaxInc = req.body.taxInclusive !== undefined ? Boolean(req.body.taxInclusive) : (current.taxInclusive ?? true);
+  let calcBasePrice = numPrice;
+  let calcGstAmount = 0;
+  if (rate > 0) {
+    if (isTaxInc) {
+      calcBasePrice = Math.round((numPrice / (1 + rate / 100)) * 100) / 100;
+      calcGstAmount = Math.round((numPrice - calcBasePrice) * 100) / 100;
+    } else {
+      calcGstAmount = Math.round((numPrice * (rate / 100)) * 100) / 100;
+    }
+  }
+
   const updated: Product = {
     ...current,
     ...req.body,
     id: current.id, // prevent id overwrite
-    price: req.body.price !== undefined ? Number(req.body.price) : current.price,
-    originalPrice: req.body.originalPrice !== undefined ? Number(req.body.originalPrice) : current.originalPrice,
+    image: primaryImage,
+    images: processedImages,
+    price: numPrice,
+    originalPrice: req.body.originalPrice !== undefined ? (req.body.originalPrice ? Number(req.body.originalPrice) : undefined) : current.originalPrice,
+    inStock: req.body.inStock !== undefined ? Boolean(req.body.inStock) : current.inStock,
     stockCount: req.body.stockCount !== undefined ? Number(req.body.stockCount) : current.stockCount,
     shippingCharge: req.body.shippingCharge !== undefined ? Number(req.body.shippingCharge) : (current.shippingCharge ?? 0),
     piecesAvailable: req.body.piecesAvailable !== undefined ? Number(req.body.piecesAvailable) : (current.piecesAvailable ?? 100),
+    colors: Array.isArray(req.body.colors) ? req.body.colors : current.colors,
+    color: req.body.color !== undefined ? req.body.color : current.color,
+    gsm: req.body.gsm !== undefined ? req.body.gsm : current.gsm,
+    features: Array.isArray(req.body.features) ? req.body.features : current.features,
+    careInstructions: req.body.careInstructions !== undefined ? req.body.careInstructions : current.careInstructions,
+    tags: Array.isArray(req.body.tags) ? req.body.tags : current.tags,
+    gstApplicable: req.body.gstApplicable !== undefined ? Boolean(req.body.gstApplicable) : (current.gstApplicable ?? true),
+    gstRate: rate,
+    hsnCode: req.body.hsnCode !== undefined ? String(req.body.hsnCode).trim() : (current.hsnCode || '6109'),
+    taxInclusive: isTaxInc,
+    basePrice: req.body.basePrice !== undefined ? Number(req.body.basePrice) : calcBasePrice,
+    gstAmount: req.body.gstAmount !== undefined ? Number(req.body.gstAmount) : calcGstAmount,
     productLink: autoProductLink,
     updatedAt: new Date().toISOString(),
   };
@@ -500,6 +664,21 @@ app.post('/api/orders', async (req: Request, res: Response) => {
       const verifiedPrice = Number(dbProduct.price);
       calculatedSubtotal += verifiedPrice * requestedQty;
 
+      const gstRate = dbProduct.gstApplicable !== false ? (dbProduct.gstRate !== undefined ? Number(dbProduct.gstRate) : (verifiedPrice >= 1000 ? 12 : 5)) : 0;
+      const hsnCode = dbProduct.hsnCode || '6109';
+      const taxInclusive = dbProduct.taxInclusive !== false;
+
+      let itemBasePrice = verifiedPrice;
+      let itemTaxAmount = 0;
+      if (gstRate > 0) {
+        if (taxInclusive) {
+          itemBasePrice = Math.round((verifiedPrice / (1 + gstRate / 100)) * 100) / 100;
+          itemTaxAmount = Math.round((verifiedPrice - itemBasePrice) * 100) / 100;
+        } else {
+          itemTaxAmount = Math.round((verifiedPrice * (gstRate / 100)) * 100) / 100;
+        }
+      }
+
       validatedItems.push({
         productId: dbProduct.id,
         productName: dbProduct.name,
@@ -509,12 +688,32 @@ app.post('/api/orders', async (req: Request, res: Response) => {
         quantity: requestedQty,
         price: verifiedPrice,
         image: dbProduct.image,
+        gstRate,
+        hsnCode,
+        basePrice: itemBasePrice,
+        taxAmount: itemTaxAmount,
+        sellerId: dbProduct.sellerId || 'ziproo_official',
+        sellerName: dbProduct.sellerName || 'ZIPROO Official Atelier',
+        fulfillmentStatus: 'PENDING',
       });
     }
 
     const subtotal = calculatedSubtotal;
     const shipping = subtotal >= db.settings.freeShippingThreshold ? 0 : 99; // ₹99 nominal shipping under threshold
     const totalAmount = subtotal + shipping;
+
+    // Authoritative Order Tax Summary calculation
+    const totalTax = Math.round(validatedItems.reduce((sum, it) => sum + (it.taxAmount || 0) * it.quantity, 0) * 100) / 100;
+    const taxableAmount = Math.round(validatedItems.reduce((sum, it) => sum + (it.basePrice || it.price) * it.quantity, 0) * 100) / 100;
+    const cgst = Math.round((totalTax / 2) * 100) / 100;
+    const sgst = Math.round((totalTax - cgst) * 100) / 100;
+
+    const taxSummary = {
+      totalTax,
+      taxableAmount,
+      cgst,
+      sgst,
+    };
 
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const orderId = `ord_${Date.now()}`;
@@ -585,6 +784,7 @@ app.post('/api/orders', async (req: Request, res: Response) => {
       subtotal,
       shipping,
       totalAmount,
+      taxSummary,
       paymentMethod: paymentMethod === 'online_portal' ? 'online_portal' : paymentMethod === 'razorpay' ? 'razorpay' : 'cod',
       paymentStatus: initialPaymentStatus,
       transactionReference: transactionReference ? String(transactionReference).trim() : undefined,
@@ -665,6 +865,31 @@ app.post('/api/orders', async (req: Request, res: Response) => {
       } catch (err: any) {
         console.error('[ZIPROO] Customer SMS dispatch failed:', err);
         newOrder.notificationLog.customerSmsError = err.message || String(err);
+      }
+    }
+
+    // 4. Dispatch Individual Seller Notification Emails (Part 7: ONLY their products, never other sellers' data)
+    const sellerItemMap = new Map<string, OrderItem[]>();
+    for (const ordItem of newOrder.items) {
+      const sId = ordItem.sellerId || 'ziproo_official';
+      if (sId && sId !== 'ziproo_official') {
+        if (!sellerItemMap.has(sId)) {
+          sellerItemMap.set(sId, []);
+        }
+        sellerItemMap.get(sId)!.push(ordItem);
+      }
+    }
+
+    for (const [sId, sItems] of sellerItemMap.entries()) {
+      const seller = (db.sellers || []).find((s) => s.id === sId);
+      if (seller && seller.email && seller.emailNotificationsEnabled !== false) {
+        sendSellerOrderEmail({
+          seller,
+          order: newOrder,
+          sellerItems: sItems,
+        }).catch((err) => {
+          console.warn(`[ZIPROO] Failed to dispatch seller order email to ${seller.email}:`, err);
+        });
       }
     }
 
@@ -1589,6 +1814,848 @@ app.delete('/api/admin/admins/:id', requireAdmin, (req: AuthenticatedRequest, re
   db.admins = db.admins.filter((a) => a.id !== id && a.username !== 'rohithsharma');
   saveDatabase(db);
   res.json({ success: true, id });
+});
+
+// =========================================================================
+// MULTI-SELLER PLATFORM APIS (PART 2 - PART 10)
+// =========================================================================
+
+// ----------------- 1. SELLER AUTHENTICATION (PART 3) -----------------
+
+// POST /api/sellers/auth/register
+app.post('/api/sellers/auth/register', (req: Request, res: Response) => {
+  const { name, businessName, email, phone, password, address, city, state, pinCode, gstNumber, description } = req.body;
+  if (!name || !businessName || !email || !phone || !password) {
+    return res.status(400).json({ error: 'Owner Name, Business Name, Email, Phone, and Password are required' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const db = loadDatabase();
+  db.sellers = db.sellers || [];
+
+  const existing = db.sellers.find((s) => s.email.toLowerCase() === cleanEmail);
+  if (existing) {
+    return res.status(400).json({ error: `A seller account with email '${cleanEmail}' already exists. Please sign in instead.` });
+  }
+
+  const hashed = hashPassword(password.trim());
+  const newSellerId = `seller_${Date.now()}`;
+  const newSeller: Seller = {
+    id: newSellerId,
+    name: name.trim(),
+    businessName: businessName.trim(),
+    email: cleanEmail,
+    phone: phone.trim(),
+    status: 'ACTIVE', // Automatically active for immediate onboarding, or can be managed by admin
+    address: address ? address.trim() : '',
+    city: city ? city.trim() : '',
+    state: state ? state.trim() : '',
+    pinCode: pinCode ? pinCode.trim() : '',
+    gstNumber: gstNumber ? gstNumber.trim() : undefined,
+    description: description ? description.trim() : '',
+    commissionPercentage: 10,
+    emailNotificationsEnabled: true,
+    salt: hashed.salt,
+    hash: hashed.hash,
+    createdAt: new Date().toISOString(),
+  };
+
+  db.sellers.push(newSeller);
+  saveDatabase(db);
+
+  const token = generateToken({
+    id: newSeller.id,
+    role: 'SELLER',
+    name: newSeller.name,
+    email: newSeller.email,
+    businessName: newSeller.businessName,
+  });
+
+  const { salt, hash, ...safeSeller } = newSeller;
+  res.status(201).json({
+    success: true,
+    message: `Welcome to the ZIPROO Seller Atelier, ${safeSeller.businessName}`,
+    seller: safeSeller,
+    token,
+  });
+});
+
+// POST /api/sellers/auth/login
+app.post('/api/sellers/auth/login', (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const db = loadDatabase();
+  db.sellers = db.sellers || [];
+
+  const seller = db.sellers.find((s) => s.email.toLowerCase() === cleanEmail);
+  if (!seller || !seller.salt || !seller.hash) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  const isValid = verifyPassword(password, seller.salt, seller.hash);
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  if (seller.status === 'SUSPENDED') {
+    return res.status(403).json({
+      error: 'Your seller account has been suspended by administration.',
+      reason: seller.suspendedReason || 'Account suspended',
+    });
+  }
+
+  const token = generateToken({
+    id: seller.id,
+    role: 'SELLER',
+    name: seller.name,
+    email: seller.email,
+    businessName: seller.businessName,
+  });
+
+  const { salt, hash, ...safeSeller } = seller;
+  res.json({
+    success: true,
+    message: `Welcome back, ${safeSeller.businessName}`,
+    seller: safeSeller,
+    token,
+  });
+});
+
+// GET /api/sellers/auth/me
+app.get('/api/sellers/auth/me', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const db = loadDatabase();
+
+  const sellerProducts = (db.products || []).filter((p) => p.sellerId === seller.id);
+  const sellerOrders = (db.orders || []).filter((o) =>
+    (o.items || []).some((it) => it.sellerId === seller.id)
+  );
+
+  let totalSales = 0;
+  for (const ord of sellerOrders) {
+    for (const it of ord.items) {
+      if (it.sellerId === seller.id) {
+        totalSales += (it.price || 0) * (it.quantity || 1);
+      }
+    }
+  }
+
+  const { salt, hash, ...safeSeller } = seller;
+  res.json({
+    seller: safeSeller,
+    stats: {
+      totalProducts: sellerProducts.length,
+      activeProducts: sellerProducts.filter((p) => p.inStock && p.approvalStatus === 'APPROVED').length,
+      pendingApproval: sellerProducts.filter((p) => p.approvalStatus === 'PENDING_APPROVAL').length,
+      rejectedProducts: sellerProducts.filter((p) => p.approvalStatus === 'REJECTED').length,
+      totalOrders: sellerOrders.length,
+      totalSales,
+    },
+  });
+});
+
+// PUT /api/sellers/profile
+app.put('/api/sellers/profile', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const db = loadDatabase();
+  const current = db.sellers.find((s) => s.id === seller.id);
+  if (!current) {
+    return res.status(404).json({ error: 'Seller account not found' });
+  }
+
+  const {
+    name,
+    businessName,
+    phone,
+    address,
+    city,
+    state,
+    pinCode,
+    gstNumber,
+    hsnCodeDefault,
+    description,
+    bankDetails,
+    emailNotificationsEnabled,
+    password,
+  } = req.body;
+
+  if (name) current.name = name.trim();
+  if (businessName) current.businessName = businessName.trim();
+  if (phone) current.phone = phone.trim();
+  if (address !== undefined) current.address = address.trim();
+  if (city !== undefined) current.city = city.trim();
+  if (state !== undefined) current.state = state.trim();
+  if (pinCode !== undefined) current.pinCode = pinCode.trim();
+  if (gstNumber !== undefined) current.gstNumber = gstNumber.trim();
+  if (hsnCodeDefault !== undefined) current.hsnCodeDefault = hsnCodeDefault.trim();
+  if (description !== undefined) current.description = description.trim();
+  if (bankDetails) current.bankDetails = bankDetails;
+  if (emailNotificationsEnabled !== undefined) current.emailNotificationsEnabled = Boolean(emailNotificationsEnabled);
+
+  if (password && password.trim().length >= 6) {
+    const hashed = hashPassword(password.trim());
+    current.salt = hashed.salt;
+    current.hash = hashed.hash;
+  }
+
+  current.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  const { salt, hash, ...safeSeller } = current;
+  res.json({ success: true, seller: safeSeller });
+});
+
+// ----------------- 2. SELLER PRODUCT MANAGEMENT (PART 4 & PART 5) -----------------
+
+// GET /api/seller/products
+// Seller's "My Products" page must show ONLY products created by that seller.
+app.get('/api/seller/products', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const db = loadDatabase();
+
+  // Strict isolation: Seller A never sees Seller B's products
+  const products = (db.products || []).filter((p) => p.sellerId === seller.id);
+  res.json(products);
+});
+
+// POST /api/seller/products
+// Add Product: automatically binds seller's unique sellerId, approvalStatus = 'PENDING_APPROVAL'
+app.post('/api/seller/products', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const {
+    name,
+    category,
+    price,
+    originalPrice,
+    salePrice,
+    description,
+    fabricDetails,
+    material,
+    image,
+    primaryImage,
+    images,
+    sizes,
+    colors,
+    color,
+    gsm,
+    features,
+    careInstructions,
+    tags,
+    inStock,
+    stockCount,
+    piecesAvailable,
+    inventoryQuantity,
+    gstApplicable,
+    gstRate,
+    hsnCode,
+    taxInclusive,
+  } = req.body;
+
+  if (!name || !category || price === undefined) {
+    return res.status(400).json({ error: 'Product name, category, and price are required' });
+  }
+
+  const db = loadDatabase();
+
+  const finalPrice = Number(price);
+  const finalSalePrice = salePrice ? Number(salePrice) : finalPrice;
+  const finalGstRate = gstApplicable !== false ? (gstRate !== undefined ? Number(gstRate) : 12) : 0;
+  const isTaxInclusive = taxInclusive !== false;
+
+  let basePrice = finalSalePrice;
+  let gstAmount = 0;
+  if (finalGstRate > 0) {
+    if (isTaxInclusive) {
+      basePrice = Math.round((finalSalePrice / (1 + finalGstRate / 100)) * 100) / 100;
+      gstAmount = Math.round((finalSalePrice - basePrice) * 100) / 100;
+    } else {
+      gstAmount = Math.round((finalSalePrice * (finalGstRate / 100)) * 100) / 100;
+    }
+  }
+
+  const galleryImages = Array.isArray(images) && images.length > 0 ? images : [image || primaryImage || '/assets/placeholder.jpg'];
+  const mainImage = primaryImage || image || galleryImages[0];
+  const invQty = piecesAvailable !== undefined ? Number(piecesAvailable) : inventoryQuantity !== undefined ? Number(inventoryQuantity) : (stockCount !== undefined ? Number(stockCount) : 50);
+
+  const newProductId = `prod_seller_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const newProduct: Product = {
+    id: newProductId,
+    name: name.trim(),
+    category,
+    price: finalSalePrice,
+    originalPrice: originalPrice ? Number(originalPrice) : undefined,
+    salePrice: finalSalePrice,
+    description: description ? description.trim() : '',
+    fabricDetails: fabricDetails || material || '',
+    material: material || fabricDetails || '',
+    image: mainImage,
+    primaryImage: mainImage,
+    images: galleryImages,
+    sizes: Array.isArray(sizes) && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'],
+    colors: Array.isArray(colors) && colors.length > 0 ? colors : [color || 'Deep Onyx Black'],
+    color: color || (Array.isArray(colors) && colors[0]) || 'Deep Onyx Black',
+    gsm: gsm ? Number(gsm) || gsm : undefined,
+    features: Array.isArray(features) ? features : [],
+    careInstructions: careInstructions || 'Cold wash inside out. Dry flat. Do not bleach.',
+    tags: Array.isArray(tags) ? tags : ['Streetwear', category],
+    inStock: inStock !== false && invQty > 0,
+    stockCount: invQty,
+    piecesAvailable: invQty,
+    inventoryQuantity: invQty,
+    isNewLaunch: false,
+    rating: 5,
+    reviewsCount: 0,
+    reviews: [],
+    // CRITICAL MULTI-SELLER BINDINGS
+    sellerId: seller.id, // Never trust client-submitted sellerId
+    sellerName: seller.businessName || seller.name,
+    approvalStatus: 'PENDING_APPROVAL', // Default: PENDING APPROVAL
+    // GST Details
+    gstApplicable: gstApplicable !== false,
+    gstRate: finalGstRate,
+    hsnCode: hsnCode || seller.hsnCodeDefault || '6109',
+    taxInclusive: isTaxInclusive,
+    basePrice,
+    gstAmount,
+    createdAt: new Date().toISOString(),
+  };
+
+  newProduct.productLink = `/?product=${newProductId}`;
+
+  db.products.unshift(newProduct);
+  saveDatabase(db);
+
+  res.status(201).json({
+    success: true,
+    message: `Product "${newProduct.name}" created and submitted for admin approval`,
+    product: newProduct,
+  });
+});
+
+// PUT /api/seller/products/:id
+// Update product: strictly verifies product belongs to authenticated seller
+app.put('/api/seller/products/:id', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const product = db.products.find((p) => p.id === id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  // Strict isolation check: Seller A cannot edit Seller B's product
+  if (product.sellerId !== seller.id) {
+    return res.status(403).json({
+      error: 'Forbidden: You do not own this product and cannot modify it.',
+      code: 'FORBIDDEN_OWNERSHIP',
+    });
+  }
+
+  const updates = req.body;
+  delete updates.id;
+  delete updates.sellerId; // Prevent changing seller association
+
+  // If seller updates pricing or critical specs, keep existing approval or re-flag if needed
+  Object.assign(product, updates);
+
+  if (updates.price !== undefined) {
+    product.price = Number(updates.price);
+  }
+  if (updates.images && Array.isArray(updates.images)) {
+    product.images = updates.images;
+    if (!updates.image && updates.images.length > 0) {
+      product.image = updates.images[0];
+    }
+  }
+
+  if (updates.piecesAvailable !== undefined || updates.stockCount !== undefined) {
+    const qty = Number(updates.piecesAvailable ?? updates.stockCount);
+    product.piecesAvailable = qty;
+    product.stockCount = qty;
+    product.inventoryQuantity = qty;
+    if (qty <= 0) {
+      product.inStock = false;
+    }
+  }
+
+  product.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  res.json({ success: true, product });
+});
+
+// PUT /api/seller/products/:id/stock
+// Quick stock & inventory toggle
+app.put('/api/seller/products/:id/stock', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const { inStock, piecesAvailable } = req.body;
+  const db = loadDatabase();
+
+  const product = db.products.find((p) => p.id === id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  if (product.sellerId !== seller.id) {
+    return res.status(403).json({ error: 'Forbidden: You do not own this product.' });
+  }
+
+  if (inStock !== undefined) {
+    product.inStock = Boolean(inStock);
+  }
+  if (piecesAvailable !== undefined) {
+    const qty = Math.max(0, Number(piecesAvailable) || 0);
+    product.piecesAvailable = qty;
+    product.stockCount = qty;
+    product.inventoryQuantity = qty;
+    if (qty === 0) product.inStock = false;
+  }
+
+  product.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  res.json({ success: true, product });
+});
+
+// DELETE /api/seller/products/:id
+app.delete('/api/seller/products/:id', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const product = db.products.find((p) => p.id === id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  if (product.sellerId !== seller.id) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to delete this product.' });
+  }
+
+  db.products = db.products.filter((p) => p.id !== id);
+  saveDatabase(db);
+
+  res.json({ success: true, message: 'Product deleted successfully', id });
+});
+
+// ----------------- 3. SELLER ORDERS (PART 6 & PART 7) -----------------
+
+// GET /api/seller/orders
+// Returns ONLY orders containing this seller's products, showing ONLY this seller's items!
+app.get('/api/seller/orders', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const db = loadDatabase();
+
+  const scopedOrders: any[] = [];
+
+  for (const ord of db.orders || []) {
+    // Filter items belonging ONLY to this seller
+    const sellerItems = (ord.items || []).filter((it) => it.sellerId === seller.id);
+    if (sellerItems.length > 0) {
+      const sellerSubtotal = sellerItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || 1), 0);
+      const sellerItemCount = sellerItems.reduce((acc, it) => acc + (it.quantity || 1), 0);
+
+      // Scoped order payload: Never leaks Seller B's items to Seller A!
+      scopedOrders.push({
+        id: ord.id,
+        orderNumber: ord.orderNumber,
+        createdAt: ord.createdAt,
+        orderStatus: ord.orderStatus,
+        paymentStatus: ord.paymentStatus,
+        paymentMethod: ord.paymentMethod,
+        items: sellerItems,
+        sellerSubtotal,
+        sellerItemCount,
+        // Customer information required for shipping & fulfillment
+        customerName: ord.customerName,
+        mobileNumber: ord.mobileNumber,
+        completeAddress: ord.completeAddress,
+        city: ord.city,
+        state: ord.state,
+        pinCode: ord.pinCode,
+        trackingInfo: ord.trackingInfo,
+      });
+    }
+  }
+
+  // Sort descending
+  scopedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  res.json({
+    success: true,
+    total: scopedOrders.length,
+    orders: scopedOrders,
+  });
+});
+
+// GET /api/seller/orders/:id
+app.get('/api/seller/orders/:id', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const ord = (db.orders || []).find((o) => o.id === id || o.orderNumber === id);
+  if (!ord) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  const sellerItems = (ord.items || []).filter((it) => it.sellerId === seller.id);
+  if (sellerItems.length === 0) {
+    return res.status(403).json({ error: 'Forbidden: You do not have products in this order.' });
+  }
+
+  const sellerSubtotal = sellerItems.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || 1), 0);
+
+  res.json({
+    success: true,
+    order: {
+      id: ord.id,
+      orderNumber: ord.orderNumber,
+      createdAt: ord.createdAt,
+      orderStatus: ord.orderStatus,
+      paymentStatus: ord.paymentStatus,
+      paymentMethod: ord.paymentMethod,
+      items: sellerItems,
+      sellerSubtotal,
+      customerName: ord.customerName,
+      mobileNumber: ord.mobileNumber,
+      completeAddress: ord.completeAddress,
+      city: ord.city,
+      state: ord.state,
+      pinCode: ord.pinCode,
+      trackingInfo: ord.trackingInfo,
+    },
+  });
+});
+
+// PUT /api/seller/orders/:id/status
+// Update fulfillment status for this seller's items
+app.put('/api/seller/orders/:id/status', requireSeller, (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const { fulfillmentStatus, carrier, trackingNumber } = req.body;
+  const db = loadDatabase();
+
+  const ord = (db.orders || []).find((o) => o.id === id || o.orderNumber === id);
+  if (!ord) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  let updatedAny = false;
+  for (const item of ord.items || []) {
+    if (item.sellerId === seller.id) {
+      if (fulfillmentStatus) item.fulfillmentStatus = fulfillmentStatus;
+      if (carrier) item.carrier = carrier.trim();
+      if (trackingNumber) item.trackingNumber = trackingNumber.trim();
+      updatedAny = true;
+    }
+  }
+
+  if (!updatedAny) {
+    return res.status(403).json({ error: 'Forbidden: No items for this seller found in order.' });
+  }
+
+  // Update order tracking carrier if provided
+  if (carrier || trackingNumber) {
+    ord.trackingInfo = ord.trackingInfo || {};
+    if (carrier) ord.trackingInfo.carrier = carrier.trim();
+    if (trackingNumber) ord.trackingInfo.trackingNumber = trackingNumber.trim();
+  }
+
+  saveDatabase(db);
+  res.json({ success: true, message: 'Order fulfillment status updated successfully' });
+});
+
+// POST /api/seller/orders/:id/resend-email
+// Seller can retry sending notification email for their items
+app.post('/api/seller/orders/:id/resend-email', requireSeller, async (req: AuthenticatedSellerRequest, res: Response) => {
+  const seller = req.seller!;
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const ord = (db.orders || []).find((o) => o.id === id || o.orderNumber === id);
+  if (!ord) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  const sellerItems = (ord.items || []).filter((it) => it.sellerId === seller.id);
+  if (sellerItems.length === 0) {
+    return res.status(403).json({ error: 'Forbidden: No products for this seller in this order' });
+  }
+
+  const result = await sendSellerOrderEmail({
+    seller,
+    order: ord,
+    sellerItems,
+    forceResend: true,
+  });
+
+  saveDatabase(db);
+  res.json(result);
+});
+
+// ----------------- 4. ADMIN SELLER MANAGEMENT (PART 8) -----------------
+
+// GET /api/admin/sellers
+app.get('/api/admin/sellers', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  db.sellers = db.sellers || [];
+
+  const sellersWithStats = db.sellers.map((s) => {
+    const sellerProducts = (db.products || []).filter((p) => p.sellerId === s.id);
+    const sellerOrders = (db.orders || []).filter((o) =>
+      (o.items || []).some((it) => it.sellerId === s.id)
+    );
+
+    let totalRevenue = 0;
+    for (const ord of sellerOrders) {
+      for (const it of ord.items) {
+        if (it.sellerId === s.id) {
+          totalRevenue += (it.price || 0) * (it.quantity || 1);
+        }
+      }
+    }
+
+    const { salt, hash, ...safeSeller } = s;
+    return {
+      ...safeSeller,
+      stats: {
+        totalProducts: sellerProducts.length,
+        approvedProducts: sellerProducts.filter((p) => p.approvalStatus === 'APPROVED').length,
+        pendingProducts: sellerProducts.filter((p) => p.approvalStatus === 'PENDING_APPROVAL').length,
+        totalOrders: sellerOrders.length,
+        totalRevenue,
+      },
+    };
+  });
+
+  res.json(sellersWithStats);
+});
+
+// POST /api/admin/sellers
+// Admin directly creates / onboards seller
+app.post('/api/admin/sellers', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { name, businessName, email, phone, password, status, commissionPercentage, gstNumber, address, city, state, pinCode, description } = req.body;
+  if (!name || !businessName || !email || !phone) {
+    return res.status(400).json({ error: 'Name, Business Name, Email, and Phone are required' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const db = loadDatabase();
+  db.sellers = db.sellers || [];
+
+  if (db.sellers.some((s) => s.email.toLowerCase() === cleanEmail)) {
+    return res.status(400).json({ error: `Seller with email '${cleanEmail}' already exists` });
+  }
+
+  const defaultPass = password && password.trim().length >= 6 ? password.trim() : 'seller123';
+  const hashed = hashPassword(defaultPass);
+
+  const newSeller: Seller = {
+    id: `seller_${Date.now()}`,
+    name: name.trim(),
+    businessName: businessName.trim(),
+    email: cleanEmail,
+    phone: phone.trim(),
+    status: status || 'ACTIVE',
+    commissionPercentage: commissionPercentage !== undefined ? Number(commissionPercentage) : 10,
+    gstNumber: gstNumber ? gstNumber.trim() : undefined,
+    address: address ? address.trim() : '',
+    city: city ? city.trim() : '',
+    state: state ? state.trim() : '',
+    pinCode: pinCode ? pinCode.trim() : '',
+    description: description ? description.trim() : '',
+    emailNotificationsEnabled: true,
+    salt: hashed.salt,
+    hash: hashed.hash,
+    createdAt: new Date().toISOString(),
+    approvedAt: status === 'ACTIVE' ? new Date().toISOString() : undefined,
+  };
+
+  db.sellers.unshift(newSeller);
+  saveDatabase(db);
+
+  const { salt, hash, ...safeSeller } = newSeller;
+  res.status(201).json({ success: true, seller: safeSeller });
+});
+
+// PUT /api/admin/sellers/:id
+// Admin edits seller
+app.put('/api/admin/sellers/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  const seller = (db.sellers || []).find((s) => s.id === id);
+  if (!seller) {
+    return res.status(404).json({ error: 'Seller not found' });
+  }
+
+  const {
+    name,
+    businessName,
+    email,
+    phone,
+    status,
+    commissionPercentage,
+    gstNumber,
+    address,
+    city,
+    state,
+    pinCode,
+    description,
+    suspendedReason,
+    bankDetails,
+  } = req.body;
+
+  if (name) seller.name = name.trim();
+  if (businessName) seller.businessName = businessName.trim();
+  if (email) seller.email = email.trim().toLowerCase();
+  if (phone) seller.phone = phone.trim();
+  if (status) {
+    seller.status = status;
+    if (status === 'ACTIVE' && !seller.approvedAt) {
+      seller.approvedAt = new Date().toISOString();
+    }
+  }
+  if (commissionPercentage !== undefined) seller.commissionPercentage = Number(commissionPercentage);
+  if (gstNumber !== undefined) seller.gstNumber = gstNumber.trim();
+  if (address !== undefined) seller.address = address.trim();
+  if (city !== undefined) seller.city = city.trim();
+  if (state !== undefined) seller.state = state.trim();
+  if (pinCode !== undefined) seller.pinCode = pinCode.trim();
+  if (description !== undefined) seller.description = description.trim();
+  if (suspendedReason !== undefined) seller.suspendedReason = suspendedReason.trim();
+  if (bankDetails) seller.bankDetails = bankDetails;
+
+  seller.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  const { salt, hash, ...safeSeller } = seller;
+  res.json({ success: true, seller: safeSeller });
+});
+
+// PUT /api/admin/sellers/:id/status
+// Quick approve / suspend / activate
+app.put('/api/admin/sellers/:id/status', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { status, suspendedReason } = req.body;
+  if (!status || !['ACTIVE', 'PENDING', 'SUSPENDED'].includes(status)) {
+    return res.status(400).json({ error: "Status must be 'ACTIVE', 'PENDING', or 'SUSPENDED'" });
+  }
+
+  const db = loadDatabase();
+  const seller = (db.sellers || []).find((s) => s.id === id);
+  if (!seller) {
+    return res.status(404).json({ error: 'Seller not found' });
+  }
+
+  seller.status = status;
+  if (status === 'ACTIVE' && !seller.approvedAt) {
+    seller.approvedAt = new Date().toISOString();
+  }
+  if (suspendedReason) {
+    seller.suspendedReason = suspendedReason.trim();
+  } else if (status === 'ACTIVE') {
+    seller.suspendedReason = undefined;
+  }
+
+  seller.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  const { salt, hash, ...safeSeller } = seller;
+  res.json({ success: true, seller: safeSeller });
+});
+
+// POST /api/admin/sellers/:id/reset-password
+app.post('/api/admin/sellers/:id/reset-password', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.trim().length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  const db = loadDatabase();
+  const seller = (db.sellers || []).find((s) => s.id === id);
+  if (!seller) {
+    return res.status(404).json({ error: 'Seller not found' });
+  }
+
+  const hashed = hashPassword(newPassword.trim());
+  seller.salt = hashed.salt;
+  seller.hash = hashed.hash;
+  seller.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Password for seller "${seller.businessName}" reset successfully` });
+});
+
+// DELETE /api/admin/sellers/:id
+app.delete('/api/admin/sellers/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const seller = (db.sellers || []).find((s) => s.id === id);
+  if (!seller) {
+    return res.status(404).json({ error: 'Seller not found' });
+  }
+
+  db.sellers = (db.sellers || []).filter((s) => s.id !== id);
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Seller "${seller.businessName}" removed`, id });
+});
+
+// ----------------- 5. ADMIN PRODUCT APPROVAL SYSTEM (PART 9 & PART 10) -----------------
+
+// GET /api/admin/products
+// Admin can see ALL products from ALL sellers with clear seller badges and approval statuses
+app.get('/api/admin/products', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json(db.products || []);
+});
+
+// PUT /api/admin/products/:id/approve
+// Approves product -> status becomes APPROVED, appears in public store
+app.put('/api/admin/products/:id/approve', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+
+  const product = db.products.find((p) => p.id === id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  product.approvalStatus = 'APPROVED';
+  product.rejectionReason = undefined;
+  product.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Product "${product.name}" has been approved and is now live on the storefront!`, product });
+});
+
+// PUT /api/admin/products/:id/reject
+// Rejects product with optional reason
+app.put('/api/admin/products/:id/reject', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { rejectionReason } = req.body;
+  const db = loadDatabase();
+
+  const product = db.products.find((p) => p.id === id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  product.approvalStatus = 'REJECTED';
+  product.rejectionReason = rejectionReason ? rejectionReason.trim() : 'Does not meet ZIPROO catalog design standards';
+  product.updatedAt = new Date().toISOString();
+  saveDatabase(db);
+
+  res.json({ success: true, message: `Product "${product.name}" marked as rejected`, product });
 });
 
 // ----------------- VITE / STATIC INTEGRATION -----------------

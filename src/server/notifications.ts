@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import nodemailer from 'nodemailer';
-import type { Order, StoreSettings, OrderStatus, EmailDispatchRecord } from '../types/index.js';
+import type { Order, StoreSettings, OrderStatus, EmailDispatchRecord, OrderItem, Seller } from '../types/index.js';
 
 const ADMIN_PRIMARY_EMAIL = 'ziproo2026@gmail.com';
 const ADMIN_SECONDARY_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'ziprooclothing@gmail.com';
@@ -1375,5 +1375,329 @@ export async function sendCustomerStatusUpdate(
   return {
     success: emailResult.success,
     message: `Customer notification dispatched for status: ${newStatus}`,
+  };
+}
+
+/**
+ * PART 7 — SELLER ORDER EMAIL
+ * When a customer purchases a seller's product:
+ * Automatically send an email notification to the corresponding seller.
+ * Subject: New ZIPROO Order – Order #[ORDER_ID]
+ * Email includes:
+ * - Order ID & Date
+ * - Product name(s), size, quantity, price belonging ONLY to this seller
+ * - Payment status
+ * - Customer & delivery fulfillment information
+ * - Shipping instructions
+ * If one order contains products from multiple sellers, sends each seller ONLY their products!
+ */
+export async function sendSellerOrderEmail(params: {
+  seller: { id: string; name: string; businessName: string; email: string };
+  order: Order;
+  sellerItems: OrderItem[];
+  forceResend?: boolean;
+}): Promise<{ success: boolean; message: string; error?: string }> {
+  const { seller, order, sellerItems, forceResend = false } = params;
+
+  if (!seller.email || !seller.email.trim()) {
+    return { success: false, message: 'Seller has no registered email' };
+  }
+
+  const orderNum = order.orderNumber || order.id;
+  const dedupKey = `seller_email_${seller.id}_${orderNum}`;
+
+  if (!forceResend && inFlightEmailLocks.has(dedupKey)) {
+    return { success: true, message: 'Seller email dispatch already in flight' };
+  }
+
+  order.notificationLog = order.notificationLog || {
+    adminEmailSent: false,
+    adminEmailRecipient: ADMIN_PRIMARY_EMAIL,
+    customerSmsSent: false,
+    customerSmsRecipient: order.mobileNumber,
+  };
+  order.notificationLog.sellerEmails = order.notificationLog.sellerEmails || [];
+
+  if (!forceResend) {
+    const alreadySent = order.notificationLog.sellerEmails.find(
+      (s) => s.sellerId === seller.id && s.success
+    );
+    if (alreadySent) {
+      return { success: true, message: 'Seller email already dispatched successfully' };
+    }
+  }
+
+  inFlightEmailLocks.add(dedupKey);
+
+  const subject = `New ZIPROO Order – Order #${orderNum}`;
+  const sellerSubtotal = sellerItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+
+  const itemsHtml = sellerItems
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #27272a;">
+        <td style="padding: 12px 8px; vertical-align: top;">
+          ${item.image ? `<img src="${item.image}" alt="${item.productName}" width="48" height="48" style="border-radius: 4px; object-fit: cover; border: 1px solid #3f3f46; display: inline-block; margin-right: 8px; vertical-align: middle;" />` : ''}
+          <div style="display: inline-block; vertical-align: middle;">
+            <div style="font-weight: 600; color: #ffffff; font-size: 14px;">${item.productName}</div>
+            <div style="color: #a1a1aa; font-size: 12px;">Size: <strong style="color: #e4e4e7;">${item.size}</strong>${item.color ? ` · Color: <strong style="color: #e4e4e7;">${item.color}</strong>` : ''}</div>
+          </div>
+        </td>
+        <td style="padding: 12px 8px; text-align: center; color: #e4e4e7; font-size: 14px; font-weight: 600; vertical-align: middle;">
+          ${item.quantity}
+        </td>
+        <td style="padding: 12px 8px; text-align: right; color: #a855f7; font-size: 14px; font-weight: 700; vertical-align: middle;">
+          ₹${(item.price * item.quantity).toLocaleString('en-IN')}
+        </td>
+      </tr>
+    `
+    )
+    .join('');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #09090b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #09090b; padding: 24px 12px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #121215; border: 1px solid #27272a; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #18181b 0%, #2e1065 100%); padding: 28px 24px; border-bottom: 2px solid #7c3aed; text-align: left;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.2em; color: #ffffff; text-transform: uppercase;">
+                      Z I P R O O
+                    </div>
+                    <div style="font-size: 11px; color: #c084fc; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px;">
+                      Official Seller Portal · Order Fulfillment Notice
+                    </div>
+                  </td>
+                  <td align="right">
+                    <span style="background-color: #7c3aed; color: #ffffff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;">
+                      Order #${orderNum}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Seller Greeting -->
+          <tr>
+            <td style="padding: 24px 24px 12px 24px;">
+              <h2 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #ffffff;">
+                Hello, ${seller.businessName || seller.name}!
+              </h2>
+              <p style="margin: 0; font-size: 14px; color: #a1a1aa; line-height: 1.5;">
+                You have received a new customer order for your products on the ZIPROO marketplace. Please review the items below and prepare them for packaging and dispatch.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Order Summary Meta -->
+          <tr>
+            <td style="padding: 12px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 16px;">
+                <tr>
+                  <td width="33%" style="padding: 4px 8px; vertical-align: top;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: #71717a; font-weight: 600;">Order ID</div>
+                    <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-top: 2px;">#${orderNum}</div>
+                  </td>
+                  <td width="33%" style="padding: 4px 8px; vertical-align: top;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: #71717a; font-weight: 600;">Order Date</div>
+                    <div style="font-size: 13px; font-weight: 600; color: #e4e4e7; margin-top: 2px;">${new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                  </td>
+                  <td width="33%" style="padding: 4px 8px; vertical-align: top;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: #71717a; font-weight: 600;">Payment Status</div>
+                    <div style="font-size: 13px; font-weight: 700; color: ${order.paymentStatus === 'Paid' ? '#10b981' : '#f59e0b'}; margin-top: 2px;">
+                      ${order.paymentStatus.toUpperCase()} (${order.paymentMethod.toUpperCase()})
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Seller's Products Table (ONLY this seller's products) -->
+          <tr>
+            <td style="padding: 16px 24px;">
+              <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c084fc; margin-bottom: 12px;">
+                Your Order Items (${sellerItems.length})
+              </div>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #3f3f46; color: #71717a; font-size: 11px; text-transform: uppercase;">
+                    <th align="left" style="padding: 8px;">Product</th>
+                    <th align="center" style="padding: 8px;">Qty</th>
+                    <th align="right" style="padding: 8px;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="2" style="padding: 14px 8px; text-align: right; color: #a1a1aa; font-size: 13px; font-weight: 600;">
+                      Total Payable to You:
+                    </td>
+                    <td style="padding: 14px 8px; text-align: right; color: #ffffff; font-size: 16px; font-weight: 800;">
+                      ₹${sellerSubtotal.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Fulfillment & Customer Shipping Information -->
+          <tr>
+            <td style="padding: 12px 24px;">
+              <div style="background-color: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 16px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #ffffff; margin-bottom: 8px;">
+                  Delivery / Fulfillment Destination:
+                </div>
+                <div style="font-size: 14px; font-weight: 600; color: #e4e4e7;">${order.customerName}</div>
+                <div style="font-size: 13px; color: #a1a1aa; margin-top: 4px; line-height: 1.4;">
+                  ${order.completeAddress}<br />
+                  ${order.city}, ${order.state} - ${order.pinCode}<br />
+                  Contact: <strong style="color: #e4e4e7;">${order.mobileNumber}</strong>
+                </div>
+                ${order.trackingInfo?.trackingNumber ? `<div style="margin-top: 10px; font-size: 12px; color: #c084fc;">Courier Tracking: ${order.trackingInfo.trackingNumber} (${order.trackingInfo.carrier || 'Express'})</div>` : ''}
+              </div>
+            </td>
+          </tr>
+
+          <!-- Action Button -->
+          <tr>
+            <td style="padding: 20px 24px; text-align: center;">
+              <p style="font-size: 13px; color: #71717a; margin-bottom: 16px;">
+                Please pack and dispatch within 24–48 hours. Update fulfillment status in your Seller Portal.
+              </p>
+              <a href="https://ziproofashion.com/seller/dashboard" style="display: inline-block; background-color: #7c3aed; color: #ffffff; padding: 12px 28px; border-radius: 6px; font-weight: 700; font-size: 13px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em;">
+                Open Seller Dashboard
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0c0a09; padding: 16px 24px; border-top: 1px solid #27272a; text-align: center; font-size: 11px; color: #52525b;">
+              ZIPROO Marketplaces & Atelier · Established 2026<br />
+              This is an automated operational notification sent to registered seller ${seller.email}.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const plainText = `
+NEW ZIPROO ORDER – ORDER #${orderNum}
+------------------------------------------------
+Hello ${seller.businessName || seller.name},
+
+You have received a new order for your products on the ZIPROO marketplace.
+
+ORDER DETAILS:
+- Order ID: #${orderNum}
+- Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}
+- Payment Status: ${order.paymentStatus} (${order.paymentMethod.toUpperCase()})
+
+YOUR PRODUCTS IN THIS ORDER:
+${sellerItems.map((it) => `- ${it.productName} | Size: ${it.size} | Qty: ${it.quantity} | ₹${(it.price * it.quantity).toLocaleString('en-IN')}`).join('\n')}
+
+Total Amount for Your Items: ₹${sellerSubtotal.toLocaleString('en-IN')}
+
+CUSTOMER DELIVERY INFORMATION:
+Name: ${order.customerName}
+Address: ${order.completeAddress}, ${order.city}, ${order.state} - ${order.pinCode}
+Phone: ${order.mobileNumber}
+
+Please prepare the package and update tracking status at https://ziproofashion.com/seller/dashboard
+ZIPROO 2026 — CREATE YOUR IDENTITY.
+  `;
+
+  let sentSuccessfully = false;
+  let dispatchError: string | undefined;
+
+  // 1. Try Brevo API
+  const brevoApiKey = getBrevoApiKey();
+  if (brevoApiKey) {
+    const brevoRes = await sendBrevoEmail({
+      toEmail: seller.email,
+      toName: seller.businessName || seller.name,
+      subject,
+      htmlContent,
+      textContent: plainText,
+      senderName: 'ZIPROO Seller Orders',
+      senderEmail: BREVO_SENDER_EMAIL,
+    });
+    if (brevoRes.success) {
+      sentSuccessfully = true;
+    } else {
+      dispatchError = brevoRes.error;
+    }
+  }
+
+  // 2. Try SMTP fallback if Brevo not used or failed
+  if (!sentSuccessfully && SMTP_HOST && SMTP_USER && SMTP_PASS) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+      });
+      await transporter.sendMail({
+        from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
+        to: `"${seller.businessName || seller.name}" <${seller.email}>`,
+        subject,
+        text: plainText,
+        html: htmlContent,
+      });
+      sentSuccessfully = true;
+      dispatchError = undefined;
+    } catch (err: any) {
+      dispatchError = err.message || 'SMTP transport failed';
+    }
+  }
+
+  // If no external credentials configured in preview environment, simulate clean delivery
+  if (!brevoApiKey && !(SMTP_HOST && SMTP_USER && SMTP_PASS)) {
+    console.log(`[ZIPROO SELLER EMAIL SIMULATED] Delivered to seller "${seller.businessName}" (${seller.email}) for Order #${orderNum} (${sellerItems.length} items, ₹${sellerSubtotal})`);
+    sentSuccessfully = true;
+  }
+
+  // Record into order notification audit log
+  order.notificationLog.sellerEmails.push({
+    sellerId: seller.id,
+    sellerEmail: seller.email,
+    timestamp: new Date().toISOString(),
+    success: sentSuccessfully,
+    error: dispatchError,
+  });
+
+  inFlightEmailLocks.delete(dedupKey);
+
+  console.log(`[ZIPROO SELLER EMAIL RESULT] Seller: ${seller.email} | Order #${orderNum} | Success: ${sentSuccessfully}`);
+
+  return {
+    success: sentSuccessfully,
+    message: sentSuccessfully
+      ? `Seller notification dispatched to ${seller.email}`
+      : `Email dispatch failed: ${dispatchError}`,
+    error: dispatchError,
   };
 }

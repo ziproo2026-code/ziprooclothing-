@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import type { Product, CompanyUpdate, StoreSettings, Order, ProductReview, Customer, CustomerMessage } from '../types/index.js';
+import type { Product, CompanyUpdate, StoreSettings, Order, ProductReview, Customer, CustomerMessage, Seller } from '../types/index.js';
 import { hashPassword, verifyPassword, type StoredAdmin } from './auth.js';
 
-interface DatabaseSchema {
+export interface DatabaseSchema {
   admins: StoredAdmin[];
+  sellers: Seller[];
   products: Product[];
   updates: CompanyUpdate[];
   settings: StoreSettings;
@@ -406,6 +407,28 @@ function getInitialDatabase(): DatabaseSchema {
         status: 'read',
       },
     ],
+    sellers: [
+      {
+        id: 'seller_ziproo_atelier',
+        name: 'Rohith Sharma & Atelier',
+        businessName: 'ZIPROO Official Atelier',
+        email: 'seller@ziproo.com',
+        phone: '+91 98765 43210',
+        status: 'ACTIVE',
+        commissionPercentage: 10,
+        address: '100 Feet Road, Indiranagar',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pinCode: '560038',
+        gstNumber: '29ABCDE1234F1Z5',
+        description: 'Official flagship ZIPROO Streetwear Design Atelier & Studio',
+        emailNotificationsEnabled: true,
+        salt: admin1.salt,
+        hash: admin1.hash,
+        createdAt: '2026-09-01T00:00:00.000Z',
+        approvedAt: '2026-09-01T00:00:00.000Z',
+      },
+    ],
   };
 }
 
@@ -626,6 +649,87 @@ export function loadDatabase(): DatabaseSchema {
             data.customers.push(cust);
           }
           o.customerId = cust.id;
+          modified = true;
+        }
+      });
+    }
+
+    // Ensure multi-seller support & seed initial sellers if none exist
+    data.sellers = data.sellers || [];
+    if (data.sellers.length === 0) {
+      const sellerCreds1 = hashPassword('seller123');
+      const sellerCreds2 = hashPassword('seller123');
+
+      data.sellers = [
+        {
+          id: 'seller_kronos',
+          name: 'Karan Malhotra',
+          businessName: 'KRONOS Streetwear Co.',
+          email: 'seller@ziproo.com',
+          phone: '+91 98200 44551',
+          status: 'ACTIVE',
+          address: 'Unit 402, High Street Phoenix Mills, Lower Parel',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pinCode: '400013',
+          gstNumber: '27AABCK1234F1Z5',
+          hsnCodeDefault: '6109',
+          commissionPercentage: 12,
+          description: 'Pioneers of architectural heavy-cotton silhouettes and tactical tech-wear essentials.',
+          emailNotificationsEnabled: true,
+          salt: sellerCreds1.salt,
+          hash: sellerCreds1.hash,
+          createdAt: '2026-09-01T10:00:00.000Z',
+          approvedAt: '2026-09-02T12:00:00.000Z',
+          bankDetails: {
+            accountHolder: 'KRONOS Streetwear Co.',
+            accountNumber: '918237492819',
+            ifsc: 'HDFC0000123',
+            bankName: 'HDFC Bank',
+            upiId: 'kronos@upi',
+          },
+        },
+        {
+          id: 'seller_aura',
+          name: 'Ananya Roy',
+          businessName: 'AURA UTILITY LAB',
+          email: 'atelier.seller@ziproo.com',
+          phone: '+91 97411 99220',
+          status: 'PENDING',
+          address: '77 100ft Road, Indiranagar',
+          city: 'Bengaluru',
+          state: 'Karnataka',
+          pinCode: '560038',
+          gstNumber: '29AABCA9876C1Z2',
+          hsnCodeDefault: '6203',
+          commissionPercentage: 10,
+          description: 'Modular streetwear and utilitarian outerwear designed for contemporary urban living.',
+          emailNotificationsEnabled: true,
+          salt: sellerCreds2.salt,
+          hash: sellerCreds2.hash,
+          createdAt: '2026-09-20T14:30:00.000Z',
+          bankDetails: {
+            accountHolder: 'AURA UTILITY LAB',
+            accountNumber: '50200012938472',
+            ifsc: 'ICIC0000456',
+            bankName: 'ICICI Bank',
+            upiId: 'aura.utility@upi',
+          },
+        },
+      ];
+      modified = true;
+    }
+
+    // Ensure all products have sellerId, sellerName, and approvalStatus
+    if (data.products && Array.isArray(data.products)) {
+      data.products.forEach((p) => {
+        if (!p.sellerId) {
+          p.sellerId = 'ziproo_official';
+          p.sellerName = 'ZIPROO Official Atelier';
+          p.approvalStatus = 'APPROVED';
+          modified = true;
+        } else if (!p.approvalStatus) {
+          p.approvalStatus = 'APPROVED';
           modified = true;
         }
       });

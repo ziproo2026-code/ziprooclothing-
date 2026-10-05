@@ -30,12 +30,26 @@ export function verifyPassword(password: string, salt: string, storedHash: strin
   }
 }
 
-export function generateToken(admin: AdminUser): string {
+export type AuthRole = 'ADMIN' | 'SELLER' | 'CUSTOMER';
+
+export interface DecodedAuthUser {
+  id: string;
+  role: string;
+  normalizedRole: AuthRole;
+  name: string;
+  username?: string;
+  email?: string;
+  businessName?: string;
+}
+
+export function generateToken(user: { id: string; role: string; name: string; username?: string; email?: string; businessName?: string }): string {
   const payload = {
-    sub: admin.id,
-    username: admin.username,
-    name: admin.name,
-    role: admin.role,
+    sub: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    businessName: user.businessName,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
   };
@@ -49,7 +63,7 @@ export function generateToken(admin: AdminUser): string {
   return `${header}.${body}.${signature}`;
 }
 
-export function verifyToken(token: string): AdminUser | null {
+export function verifyToken(token: string): (AdminUser & DecodedAuthUser) | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -68,11 +82,22 @@ export function verifyToken(token: string): AdminUser | null {
       return null;
     }
 
+    const rawRole = (payload.role || '').toLowerCase();
+    let normalizedRole: AuthRole = 'CUSTOMER';
+    if (rawRole === 'seller' || rawRole === 'merchant') {
+      normalizedRole = 'SELLER';
+    } else if (rawRole.includes('founder') || rawRole.includes('lead') || rawRole.includes('admin')) {
+      normalizedRole = 'ADMIN';
+    }
+
     return {
       id: payload.sub,
-      username: payload.username,
-      name: payload.name,
+      username: payload.username || '',
+      email: payload.email || '',
+      name: payload.name || '',
       role: payload.role,
+      normalizedRole,
+      businessName: payload.businessName,
     };
   } catch {
     return null;

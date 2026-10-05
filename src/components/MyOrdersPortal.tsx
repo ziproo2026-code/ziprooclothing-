@@ -313,7 +313,7 @@ export const MyOrdersPortal: React.FC<MyOrdersPortalProps> = ({
                 <ShieldCheck className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-bold uppercase font-display text-zinc-950">
-                {isRegisterMode ? 'Create Customer Account' : 'Log In to View My Orders'}
+                {isRegisterMode ? 'Create Customer Account' : 'Please sign in to view your orders.'}
               </h3>
               <p className="text-xs text-zinc-600 max-w-sm mx-auto leading-relaxed">
                 {isRegisterMode
@@ -612,7 +612,9 @@ export const MyOrdersPortal: React.FC<MyOrdersPortalProps> = ({
             ) : filteredOrders.length === 0 ? (
               <div className="py-16 px-4 text-center rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">
                 <Package className="w-12 h-12 mx-auto text-zinc-400" />
-                <h4 className="text-base font-bold text-zinc-950 uppercase font-display">No Orders Found</h4>
+                <h4 className="text-base font-bold text-zinc-950 uppercase font-display">
+                  {orders.length === 0 ? "You haven't placed any orders yet." : "No Orders Found"}
+                </h4>
                 <p className="text-xs text-zinc-600 max-w-md mx-auto">
                   {orders.length === 0
                     ? `No orders have been recorded under ${currentCustomer.email}. Check out our limited drops and create your identity.`

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Product, CompanyUpdate, StoreSettings, Order, AdminUser, OnlineReceivingPortal } from '../types/index.js';
 import { AdminCustomersTab } from '../components/admin/AdminCustomersTab.js';
 import { AdminMessagesTab } from '../components/admin/AdminMessagesTab.js';
 import { AdminTeamTab } from '../components/admin/AdminTeamTab.js';
 import { AdminOrdersManager } from '../components/admin/AdminOrdersManager.js';
+import { AdminSellersTab } from '../components/admin/AdminSellersTab.js';
 import {
   ShieldCheck,
   Plus,
@@ -38,6 +39,9 @@ import {
   Search,
   Globe,
   Receipt,
+  Film,
+  Volume2,
+  Store,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -86,7 +90,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<'products' | 'updates' | 'orders' | 'customers' | 'messages' | 'team' | 'portal' | 'settings' | 'security'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'updates' | 'orders' | 'customers' | 'messages' | 'team' | 'portal' | 'settings' | 'security' | 'sellers'>('products');
+
+  // Multi-Seller Platform: All products including pending approval from all sellers
+  const [adminAllProducts, setAdminAllProducts] = useState<Product[]>([]);
+  const [productApprovalFilter, setProductApprovalFilter] = useState<'ALL' | 'APPROVED' | 'PENDING' | 'REJECTED'>('ALL');
+
+  const fetchAdminAllProducts = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/admin/products', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminAllProducts(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin products:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchAdminAllProducts();
+    }
+  }, [token, products]);
+
+  const handleApproveProduct = async (id: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/admin/products/${id}/approve`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        showSuccess('Product approved and published to storefront!');
+        fetchAdminAllProducts();
+        onAddProduct({} as any);
+      }
+    } catch (err) {
+      console.error('Failed to approve product:', err);
+    }
+  };
+
+  const handleRejectProduct = async (id: string) => {
+    if (!token) return;
+    const reason = prompt('Enter rejection reason for the seller:', 'Does not meet catalog design criteria');
+    if (reason === null) return;
+    try {
+      const res = await fetch(`/api/admin/products/${id}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rejectionReason: reason }),
+      });
+      if (res.ok) {
+        showSuccess('Product marked as rejected.');
+        fetchAdminAllProducts();
+      }
+    } catch (err) {
+      console.error('Failed to reject product:', err);
+    }
+  };
 
   // Product modal & form state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -98,14 +166,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [prodDescription, setProdDescription] = useState('');
   const [prodFabric, setProdFabric] = useState('');
   const [prodImage, setProdImage] = useState('');
+  const [prodImages, setProdImages] = useState<string[]>([]);
   const [prodIsNewLaunch, setProdIsNewLaunch] = useState(false);
   const [prodInStock, setProdInStock] = useState(true);
   const [prodSizes, setProdSizes] = useState<string[]>(['S', 'M', 'L', 'XL', 'XXL']);
+  const [prodColors, setProdColors] = useState('Deep Onyx Black, Slate Grey, Electric Violet');
+  const [prodGsm, setProdGsm] = useState<string | number>('280');
+  const [prodFeatures, setProdFeatures] = useState('');
+  const [prodCareInstructions, setProdCareInstructions] = useState('');
+  const [prodTags, setProdTags] = useState('');
   const [prodShippingCharge, setProdShippingCharge] = useState<number | string>(0);
   const [prodPiecesAvailable, setProdPiecesAvailable] = useState<number | string>(150);
   const [prodProductLink, setProdProductLink] = useState('');
   
   // GST Tax & HSN Portal state
+  const [prodGstApplicable, setProdGstApplicable] = useState<boolean>(true);
   const [prodGstRate, setProdGstRate] = useState<number>(12);
   const [prodHsnCode, setProdHsnCode] = useState<string>('6109');
   const [prodTaxInclusive, setProdTaxInclusive] = useState<boolean>(true);
@@ -151,6 +226,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editYoutube, setEditYoutube] = useState(settings.youtube || 'ZIPROO');
   const [editAnnouncements, setEditAnnouncements] = useState(settings.announcementMessages.join('\n'));
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Intro Video settings state
+  const [editIntroVideoUrl, setEditIntroVideoUrl] = useState(settings.introVideoUrl || '/intro_video.mp4');
+  const [editIntroVideoTitle, setEditIntroVideoTitle] = useState(settings.introVideoTitle || 'ZIPROO ATELIER · 2026 BRAND INTRO FILM');
+  const [editIntroVideoDescription, setEditIntroVideoDescription] = useState(
+    settings.introVideoDescription || "Raw street architecture, heavyweight craftsmanship, and raw urban energy. Official brand intro film with stereo soundtrack."
+  );
+  const [editIntroVideoEnabled, setEditIntroVideoEnabled] = useState(settings.introVideoEnabled !== false);
+  const [isUploadingIntroVideo, setIsUploadingIntroVideo] = useState(false);
 
   // Online Amount Receiving Portal state
   const [portalEnabled, setPortalEnabled] = useState(settings.onlineReceivingPortal?.enabled ?? true);
@@ -238,6 +322,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         const data = await res.json();
         if (res.ok && data.url) {
           setProdImage(data.url);
+          setProdImages((prev) => (prev.includes(data.url) ? prev : [data.url, ...prev].slice(0, 4)));
           showSuccess('Image uploaded successfully');
         } else {
           alert('Upload failed: ' + (data.error || 'Unknown error'));
@@ -252,7 +337,124 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     reader.readAsDataURL(file);
   };
 
+  // Gallery slot specific file upload (for 3-4 images)
+  const handleGallerySlotUpload = async (slotIndex: number, file: File) => {
+    setIsUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result as string;
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            dataUrl: base64Data,
+            fileName: file.name,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          setProdImages((prev) => {
+            const next = [...prev];
+            next[slotIndex] = data.url;
+            return next;
+          });
+          if (slotIndex === 0 || !prodImage) {
+            setProdImage(data.url);
+          }
+          showSuccess(`Gallery image #${slotIndex + 1} uploaded`);
+        } else {
+          alert('Upload failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Upload failed');
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    if (prodImages[index]) {
+      const selected = prodImages[index];
+      setProdImage(selected);
+      // Reorder so primary is first
+      setProdImages((prev) => {
+        const remaining = prev.filter((_, i) => i !== index);
+        return [selected, ...remaining];
+      });
+      showSuccess('Set as primary product image');
+    }
+  };
+
+  const handleDeleteGalleryImage = (index: number) => {
+    setProdImages((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length > 0 && prodImage === prev[index]) {
+        setProdImage(next[0]);
+      }
+      return next;
+    });
+    showSuccess('Image removed from gallery');
+  };
+
+  const handleMoveGalleryImage = (index: number, direction: 'left' | 'right') => {
+    setProdImages((prev) => {
+      const next = [...prev];
+      const targetIndex = direction === 'left' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      if (targetIndex === 0) setProdImage(next[0]);
+      return next;
+    });
+  };
+
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  // Intro Video Upload Handler (Direct MP4/WebM with Audio)
+  const handleIntroVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingIntroVideo(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result as string;
+        const res = await fetch('/api/upload-media', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            dataUrl: base64Data,
+            filename: file.name,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          setEditIntroVideoUrl(data.url);
+          showSuccess('Intro video uploaded successfully! Click Save Settings to persist.');
+        } else {
+          alert('Upload failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Intro video upload failed');
+      } finally {
+        setIsUploadingIntroVideo(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Daily update media upload handler (Image or Video)
   const handleUpdateMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
@@ -307,13 +509,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setProdOriginalPrice(product.originalPrice || '');
       setProdDescription(product.description);
       setProdFabric(product.fabricDetails || '');
-      setProdImage(product.image);
+      const existingImages = Array.isArray(product.images) && product.images.length > 0 ? [...product.images] : [product.image];
+      setProdImages(existingImages);
+      setProdImage(product.image || existingImages[0] || '');
       setProdIsNewLaunch(product.isNewLaunch);
       setProdInStock(product.inStock);
       setProdSizes(product.sizes);
+      setProdColors(Array.isArray(product.colors) ? product.colors.join(', ') : (product.color || 'Deep Onyx Black'));
+      setProdGsm(product.gsm ? String(product.gsm) : '280');
+      setProdFeatures(Array.isArray(product.features) ? product.features.join('\n') : '');
+      setProdCareInstructions(product.careInstructions || 'Cold machine wash inside out with similar colors. Do not tumble dry. Dry flat. Iron on reverse.');
+      setProdTags(Array.isArray(product.tags) ? product.tags.join(', ') : '');
       setProdShippingCharge(product.shippingCharge ?? 0);
       setProdPiecesAvailable(product.piecesAvailable ?? product.stockCount ?? 150);
       setProdProductLink(product.productLink || `${window.location.origin}/?product=${product.id}`);
+      setProdGstApplicable(product.gstApplicable ?? true);
       setProdGstRate(product.gstRate ?? (product.price >= 1000 ? 12 : 5));
       setProdHsnCode(product.hsnCode ?? getDefaultHsnForCategory(product.category));
       setProdTaxInclusive(product.taxInclusive ?? true);
@@ -326,13 +536,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setProdOriginalPrice('');
       setProdDescription('');
       setProdFabric('');
+      setProdImages([
+        '/src/assets/images/ziproo_product_tee_1790610656044.jpg',
+        '/src/assets/images/ziproo_tee_back_1791053935583.jpg',
+        '/src/assets/images/ziproo_tee_macro_1791053949356.jpg',
+        '/src/assets/images/ziproo_tee_side_1791053962419.jpg'
+      ]);
       setProdImage('/src/assets/images/ziproo_product_tee_1790610656044.jpg');
       setProdIsNewLaunch(false);
       setProdInStock(true);
       setProdSizes(['S', 'M', 'L', 'XL', 'XXL']);
+      setProdColors('Deep Onyx Black, Slate Grey, Electric Violet');
+      setProdGsm('280');
+      setProdFeatures('280 GSM Combed Heavy Cotton\nArchitectural Boxy Cut\nPre-Shrunk Bio-Washed\nReinforced Collar Ribbing');
+      setProdCareInstructions('Cold machine wash inside out with similar colors. Do not bleach. Dry flat in shade. Iron on reverse.');
+      setProdTags('Oversized, 280 GSM, Streetwear, Limited Drop');
       setProdShippingCharge(0);
       setProdPiecesAvailable(150);
       setProdProductLink(`${window.location.origin}/?product=${tempId}`);
+      setProdGstApplicable(true);
       setProdGstRate(12);
       setProdHsnCode('6109');
       setProdTaxInclusive(true);
@@ -346,7 +568,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       const numPrice = Number(prodPrice);
-      const rate = Number(prodGstRate || 0);
+      const rate = prodGstApplicable ? Number(prodGstRate || 0) : 0;
       let calculatedBasePrice = numPrice;
       let calculatedGstAmount = 0;
 
@@ -357,6 +579,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         calculatedGstAmount = Math.round((numPrice * (rate / 100)) * 100) / 100;
       }
 
+      const cleanImages = prodImages.filter((img) => typeof img === 'string' && img.trim().length > 0);
+      const primaryImg = prodImage || cleanImages[0] || '/src/assets/images/ziproo_product_tee_1790610656044.jpg';
+
+      const colorList = prodColors.split(',').map((c) => c.trim()).filter(Boolean);
+      const featureList = prodFeatures.split('\n').map((f) => f.trim()).filter(Boolean);
+      const tagList = prodTags.split(',').map((t) => t.trim()).filter(Boolean);
+
       const payload = {
         name: prodName,
         category: prodCategory,
@@ -364,14 +593,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         originalPrice: prodOriginalPrice ? Number(prodOriginalPrice) : undefined,
         description: prodDescription,
         fabricDetails: prodFabric,
-        image: prodImage || '/src/assets/images/ziproo_product_tee_1790610656044.jpg',
+        image: primaryImg,
+        images: cleanImages.length > 0 ? cleanImages : [primaryImg],
         isNewLaunch: prodIsNewLaunch,
         inStock: prodInStock,
         sizes: prodSizes,
+        colors: colorList.length > 0 ? colorList : ['Deep Onyx Black'],
+        color: colorList[0] || 'Deep Onyx Black',
+        gsm: prodGsm ? String(prodGsm).trim() : undefined,
+        features: featureList,
+        careInstructions: prodCareInstructions.trim() || 'Cold machine wash inside out. Dry flat. Iron on reverse.',
+        tags: tagList,
         shippingCharge: Number(prodShippingCharge || 0),
         piecesAvailable: Number(prodPiecesAvailable || 0),
+        stockCount: Number(prodPiecesAvailable || 0),
         productLink: prodProductLink,
-        // GST & Tax Portal
+        // GST & Tax Details
+        gstApplicable: prodGstApplicable,
         gstRate: rate,
         hsnCode: prodHsnCode.trim() || getDefaultHsnForCategory(prodCategory),
         taxInclusive: prodTaxInclusive,
@@ -474,6 +712,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         facebook: editFacebook,
         youtube: editYoutube,
         announcementMessages: messages.length ? messages : settings.announcementMessages,
+        introVideoUrl: editIntroVideoUrl.trim() || '/intro_video.mp4',
+        introVideoTitle: editIntroVideoTitle.trim(),
+        introVideoDescription: editIntroVideoDescription.trim(),
+        introVideoEnabled: editIntroVideoEnabled,
       });
       showSuccess('Brand settings & domain updated successfully');
     } catch (err) {
@@ -714,6 +956,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <span>Customer Orders ({orders.length})</span>
           </button>
 
+          {/* Multi-Seller Platform: Seller Management (PART 8) */}
+          <button
+            onClick={() => setActiveTab('sellers')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              activeTab === 'sellers'
+                ? 'bg-[#7c3aed] text-white shadow-md'
+                : 'text-[#7c3aed] hover:bg-purple-50 border border-purple-200'
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            <span>Seller Management</span>
+          </button>
+
           {/* User Requirement: Customer particulars registered in one page visible to admin only */}
           <button
             onClick={() => setActiveTab('customers')}
@@ -792,157 +1047,255 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* ================= TAB 1: PRODUCTS MANAGEMENT ================= */}
-        {activeTab === 'products' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold font-display uppercase tracking-tight text-zinc-950">
-                  Apparel Catalog & Product Management
-                </h2>
-                <p className="text-xs text-zinc-600">
-                  Manage garments, edit shipping charges, update available pieces, launch new items, and copy direct product website links.
-                </p>
-              </div>
-              <button
-                onClick={() => openProductForm()}
-                className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-lg transition-all shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New Product</span>
-              </button>
-            </div>
+        {activeTab === 'products' && (() => {
+          const catalogProducts = adminAllProducts.length > 0 ? adminAllProducts : products;
+          const approvedCount = catalogProducts.filter((p) => p.approvalStatus === 'APPROVED' || !p.approvalStatus).length;
+          const pendingCount = catalogProducts.filter((p) => p.approvalStatus === 'PENDING_APPROVAL').length;
+          const rejectedCount = catalogProducts.filter((p) => p.approvalStatus === 'REJECTED').length;
 
-            {/* Products Table with Rupees */}
-            <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-50 text-zinc-600 font-mono uppercase tracking-wider text-[11px] border-b border-zinc-200">
-                  <tr>
-                    <th className="py-3 px-4">Garment</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4">Price (₹)</th>
-                    <th className="py-3 px-4">Pieces Available</th>
-                    <th className="py-3 px-4">Shipping</th>
-                    <th className="py-3 px-4">Product Link</th>
-                    <th className="py-3 px-4">New Launch</th>
-                    <th className="py-3 px-4">Stock</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {products.map((product) => {
-                    const productDirectLink = product.productLink || `${window.location.origin}/?product=${product.id}`;
-                    return (
-                      <tr key={product.id} className="hover:bg-zinc-50/80 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={product.image}
-                              alt=""
-                              className="w-10 h-10 object-cover rounded-md bg-zinc-100 border border-zinc-200"
-                            />
-                            <div>
-                              <span className="font-bold text-zinc-950 block text-sm">{product.name}</span>
-                              <span className="text-[11px] text-zinc-500 line-clamp-1">{product.description}</span>
+          const filteredCatalogProducts = catalogProducts.filter((p) => {
+            if (productApprovalFilter === 'APPROVED') return p.approvalStatus === 'APPROVED' || !p.approvalStatus;
+            if (productApprovalFilter === 'PENDING') return p.approvalStatus === 'PENDING_APPROVAL';
+            if (productApprovalFilter === 'REJECTED') return p.approvalStatus === 'REJECTED';
+            return true;
+          });
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold font-display uppercase tracking-tight text-zinc-950">
+                    Apparel Catalog & Multi-Seller Product Management
+                  </h2>
+                  <p className="text-xs text-zinc-600">
+                    Manage garments from all sellers, review & approve new seller submissions, edit prices, and manage live stock.
+                  </p>
+                </div>
+                <button
+                  onClick={() => openProductForm()}
+                  className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-lg transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Product</span>
+                </button>
+              </div>
+
+              {/* Approval Filter Bar */}
+              <div className="flex items-center gap-2 bg-zinc-100 p-1.5 rounded-xl border border-zinc-200 overflow-x-auto">
+                <button
+                  onClick={() => setProductApprovalFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
+                    productApprovalFilter === 'ALL'
+                      ? 'bg-black text-white font-bold shadow-xs'
+                      : 'text-zinc-600 hover:text-black'
+                  }`}
+                >
+                  All Products ({catalogProducts.length})
+                </button>
+                <button
+                  onClick={() => setProductApprovalFilter('APPROVED')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
+                    productApprovalFilter === 'APPROVED'
+                      ? 'bg-emerald-700 text-white font-bold shadow-xs'
+                      : 'text-emerald-800 hover:bg-emerald-50'
+                  }`}
+                >
+                  Approved & Live ({approvedCount})
+                </button>
+                <button
+                  onClick={() => setProductApprovalFilter('PENDING')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
+                    productApprovalFilter === 'PENDING'
+                      ? 'bg-amber-600 text-white font-bold shadow-xs'
+                      : 'text-amber-800 hover:bg-amber-50'
+                  }`}
+                >
+                  Pending Approval ({pendingCount})
+                </button>
+                <button
+                  onClick={() => setProductApprovalFilter('REJECTED')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all whitespace-nowrap ${
+                    productApprovalFilter === 'REJECTED'
+                      ? 'bg-red-700 text-white font-bold shadow-xs'
+                      : 'text-red-800 hover:bg-red-50'
+                  }`}
+                >
+                  Rejected ({rejectedCount})
+                </button>
+              </div>
+
+              {/* Products Table with Rupees */}
+              <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 text-zinc-600 font-mono uppercase tracking-wider text-[11px] border-b border-zinc-200">
+                    <tr>
+                      <th className="py-3 px-4">Garment</th>
+                      <th className="py-3 px-4">Seller / Atelier</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Price (₹)</th>
+                      <th className="py-3 px-4">Pieces Available</th>
+                      <th className="py-3 px-4">Approval Status</th>
+                      <th className="py-3 px-4">New Launch</th>
+                      <th className="py-3 px-4">Stock</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {filteredCatalogProducts.map((product) => {
+                      const productDirectLink = product.productLink || `${window.location.origin}/?product=${product.id}`;
+                      const isPending = product.approvalStatus === 'PENDING_APPROVAL';
+                      const isApproved = product.approvalStatus === 'APPROVED' || !product.approvalStatus;
+                      const isRejected = product.approvalStatus === 'REJECTED';
+
+                      return (
+                        <tr key={product.id} className="hover:bg-zinc-50/80 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={product.image}
+                                alt=""
+                                className="w-10 h-10 object-cover rounded-md bg-zinc-100 border border-zinc-200"
+                              />
+                              <div>
+                                <span className="font-bold text-zinc-950 block text-sm">{product.name}</span>
+                                <span className="text-[11px] text-zinc-500 line-clamp-1">{product.description}</span>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-zinc-700">
-                          {product.category}
-                        </td>
-                        <td className="py-3 px-4 font-mono font-bold text-zinc-950 tabular-nums">
-                          <div>₹{product.price.toLocaleString('en-IN')}</div>
-                          <span className="text-[10px] font-mono text-purple-700 font-normal block">
-                            GST {product.gstRate ?? (product.price >= 1000 ? 12 : 5)}% · HSN {product.hsnCode || '6109'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono font-bold text-purple-700">
-                          {product.piecesAvailable ?? product.stockCount ?? 150} pcs
-                        </td>
-                        <td className="py-3 px-4 font-mono text-zinc-700">
-                          {product.shippingCharge === 0 || !product.shippingCharge ? (
-                            <span className="text-emerald-700 font-bold">FREE</span>
-                          ) : (
-                            `₹${product.shippingCharge}`
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(productDirectLink);
-                              setCopiedLinkProdId(product.id);
-                              showSuccess(`Copied direct website link for ${product.name}!`);
-                              setTimeout(() => setCopiedLinkProdId(null), 2500);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200 hover:border-purple-300 text-[10px] font-mono text-zinc-700 hover:text-zinc-950 transition-all whitespace-nowrap"
-                            title={productDirectLink}
-                          >
-                            {copiedLinkProdId === product.id ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span className="text-emerald-700 font-bold">Copied!</span>
-                              </>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 text-purple-900 border border-purple-200">
+                              {product.sellerName || 'ZIPROO Atelier'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono text-zinc-700">
+                            {product.category}
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-zinc-950 tabular-nums">
+                            <div>₹{product.price.toLocaleString('en-IN')}</div>
+                            <span className="text-[10px] font-mono text-purple-700 font-normal block">
+                              GST {product.gstRate ?? (product.price >= 1000 ? 12 : 5)}% · HSN {product.hsnCode || '6109'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-purple-700">
+                            {product.piecesAvailable ?? product.stockCount ?? 150} pcs
+                          </td>
+
+                          {/* Approval Status & Review Controls */}
+                          <td className="py-3 px-4">
+                            {isPending ? (
+                              <div className="space-y-1.5">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-100 text-amber-900 border border-amber-300 block text-center">
+                                  PENDING APPROVAL
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleApproveProduct(product.id)}
+                                    className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold uppercase"
+                                    title="Approve product for storefront"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectProduct(product.id)}
+                                    className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-mono font-bold uppercase"
+                                    title="Reject product"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </div>
+                            ) : isApproved ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                APPROVED · LIVE
+                              </span>
                             ) : (
-                              <>
-                                <Copy className="w-3 h-3 text-[#7c3aed]" />
-                                <span>Copy Link</span>
-                              </>
+                              <div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-red-100 text-red-900 border border-red-300">
+                                  REJECTED
+                                </span>
+                                {product.rejectionReason && (
+                                  <div className="text-[10px] text-red-600 mt-0.5 max-w-[150px] truncate" title={product.rejectionReason}>
+                                    {product.rejectionReason}
+                                  </div>
+                                )}
+                              </div>
                             )}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleNewLaunch(product)}
-                            className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
-                              product.isNewLaunch
-                                ? 'bg-[#7c3aed] text-white shadow'
-                                : 'bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200'
-                            }`}
-                            title="Click to toggle New Launch section"
-                          >
-                            {product.isNewLaunch ? '★ In New Launch' : '+ Add to Launch'}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              product.inStock
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-red-50 text-red-700 border border-red-200'
-                            }`}
-                          >
-                            {product.inStock ? 'In Stock' : 'Out of Stock'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right space-x-2">
-                          <button
-                            onClick={() => openProductForm(product)}
-                            className="p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 rounded transition-colors"
-                            title="Edit product"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Permanently delete "${product.name}"?`)) {
-                                onDeleteProduct(product.id);
-                                showSuccess('Product removed from catalog');
-                              }
-                            }}
-                            className="p-1.5 text-zinc-500 hover:text-red-600 hover:bg-zinc-100 rounded transition-colors"
-                            title="Delete product"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => handleToggleNewLaunch(product)}
+                              className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                product.isNewLaunch
+                                  ? 'bg-[#7c3aed] text-white shadow'
+                                  : 'bg-zinc-100 text-zinc-600 hover:text-zinc-950 border border-zinc-200'
+                              }`}
+                              title="Click to toggle New Launch section"
+                            >
+                              {product.isNewLaunch ? '★ In New Launch' : '+ Add to Launch'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const newInStock = !product.inStock;
+                                  await onEditProduct(product.id, { inStock: newInStock });
+                                  fetchAdminAllProducts();
+                                  showSuccess(
+                                    `"${product.name}" marked as ${newInStock ? 'IN STOCK' : 'OUT OF STOCK'} in atelier database`
+                                  );
+                                } catch (err) {
+                                  console.error('Failed to toggle stock status:', err);
+                                }
+                              }}
+                              className={`px-3 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer active:scale-95 ${
+                                product.inStock
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-red-50 hover:bg-red-100 text-red-800 border border-red-300'
+                              }`}
+                              title="Click to toggle stock status (IN STOCK / OUT OF STOCK)"
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  product.inStock ? 'bg-emerald-600 animate-pulse' : 'bg-red-600'
+                               }`}
+                              />
+                              <span>{product.inStock ? 'IN STOCK' : 'OUT OF STOCK'}</span>
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right space-x-2">
+                            <button
+                              onClick={() => openProductForm(product)}
+                              className="p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 rounded transition-colors"
+                              title="Edit product"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Permanently delete "${product.name}"?`)) {
+                                  onDeleteProduct(product.id);
+                                  fetchAdminAllProducts();
+                                  showSuccess('Product removed from catalog');
+                                }
+                              }}
+                              className="p-1.5 text-zinc-500 hover:text-red-600 hover:bg-zinc-100 rounded transition-colors"
+                              title="Delete product"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ================= TAB 2: DAILY UPDATES ================= */}
         {activeTab === 'updates' && (
@@ -1748,6 +2101,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* ================= TAB: SELLER MANAGEMENT (PART 8) ================= */}
+        {activeTab === 'sellers' && (
+          <AdminSellersTab token={token} />
+        )}
+
         {/* ================= TAB 5: BRAND & CONTACT SETTINGS ================= */}
         {activeTab === 'settings' && (
           <div className="max-w-3xl space-y-6">
@@ -1908,6 +2266,138 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {isSavingSettings ? 'Saving...' : 'Save Settings'}
               </button>
             </form>
+
+            {/* Brand Intro Film & Stereo Audio Controls Card */}
+            <div className="p-6 rounded-2xl bg-white border border-zinc-200 space-y-5 shadow-sm text-zinc-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0">
+                    <Film className="w-5 h-5 text-[#7c3aed]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-950 flex items-center gap-2">
+                      <span>Brand Intro Film & Stereo Audio</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-purple-100 text-purple-700 font-semibold">
+                        AUDIO ACTIVE
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Configure the official brand intro video and audio track displayed across the storefront.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-mono">
+                  <input
+                    type="checkbox"
+                    checked={editIntroVideoEnabled}
+                    onChange={(e) => setEditIntroVideoEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                  />
+                  <span className="font-semibold text-zinc-800">
+                    {editIntroVideoEnabled ? 'Section Enabled' : 'Section Disabled'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Intro Video Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editIntroVideoTitle}
+                    onChange={(e) => setEditIntroVideoTitle(e.target.value)}
+                    placeholder="ZIPROO ATELIER · 2026 BRAND INTRO FILM"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-sm focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Intro Video Tagline / Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={editIntroVideoDescription}
+                    onChange={(e) => setEditIntroVideoDescription(e.target.value)}
+                    placeholder="DON'T FOLLOW THE RULES. CREATE IT. · HIGH DEFINITION STEREO AUDIO"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-sm focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase font-mono text-zinc-600 mb-1 flex items-center justify-between">
+                  <span>Intro Video URL or Local MP4 Path (with Audio Track)</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">Supports /intro_video.mp4, YouTube, or MP4 URL</span>
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={editIntroVideoUrl}
+                    onChange={(e) => setEditIntroVideoUrl(e.target.value)}
+                    placeholder="/intro_video.mp4 or https://..."
+                    className="flex-1 px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                  <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-lg text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingIntroVideo ? 'Uploading...' : 'Upload Video File'}</span>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleIntroVideoUpload}
+                      disabled={isUploadingIntroVideo}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Video Preview with Audio Player */}
+              {editIntroVideoUrl && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono text-zinc-600">
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <Volume2 className="w-3.5 h-3.5 text-purple-600" />
+                      Live Video & Audio Preview:
+                    </span>
+                    <span className="text-[11px] text-zinc-500 font-mono truncate max-w-xs">
+                      {editIntroVideoUrl}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl overflow-hidden border border-zinc-200 bg-black aspect-video max-h-64 flex items-center justify-center">
+                    {editIntroVideoUrl.includes('youtube.com') || editIntroVideoUrl.includes('youtu.be') ? (
+                      <iframe
+                        src={editIntroVideoUrl.replace('watch?v=', 'embed/')}
+                        title="Intro Video Preview"
+                        className="w-full h-full aspect-video"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        controls
+                        src={editIntroVideoUrl}
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={isSavingSettings}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-all shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{isSavingSettings ? 'Saving Changes...' : 'Save Intro Video Settings'}</span>
+              </button>
+            </div>
 
             {/* Custom Domain & DNS Management Card */}
             <div className="p-6 rounded-2xl bg-white border border-zinc-200 space-y-4 shadow-sm text-zinc-900">
@@ -2131,170 +2621,350 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              {/* GST TAX & HSN PORTAL (USER REQUIREMENT) */}
+              {/* 1. STOCK MANAGEMENT STATUS CONTROL (USER REQUIREMENT) */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase font-mono text-zinc-900 font-bold tracking-wide flex items-center gap-2">
+                    <Package className="w-4 h-4 text-[#7c3aed]" />
+                    <span>Product Stock Management</span>
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                      prodInStock
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
+                    }`}
+                  >
+                    ● {prodInStock ? 'IN STOCK' : 'OUT OF STOCK'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setProdInStock(true)}
+                    className={`py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all border ${
+                      prodInStock
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                        : 'bg-white text-zinc-600 border-zinc-300 hover:border-zinc-400'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-white" />
+                    <span>IN STOCK (Purchasable)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setProdInStock(false)}
+                    className={`py-3 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all border ${
+                      !prodInStock
+                        ? 'bg-red-600 text-white border-red-700 shadow-sm'
+                        : 'bg-white text-zinc-600 border-zinc-300 hover:border-zinc-400'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-white" />
+                    <span>OUT OF STOCK (Sold Out)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  When set to OUT OF STOCK, a clear label is displayed, "Add to Cart" and "Buy Now" are disabled, and checkout is blocked while keeping the garment visible in catalog.
+                </p>
+              </div>
+
+              {/* 2. PRODUCT IMAGE GALLERY (3–4 SEPARATE IMAGES AS REQUIRED) */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs uppercase font-mono text-zinc-900 font-bold tracking-wide flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-[#7c3aed]" />
+                      <span>Product Image Gallery (3–4 Separate Images)</span>
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block mt-0.5">
+                      Upload 3–4 angles for customers to view in gallery, switch thumbnails, and zoom.
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-purple-700 font-bold bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                    {prodImages.length}/4 Images
+                  </span>
+                </div>
+
+                {/* 4 Image Slots Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {[0, 1, 2, 3].map((slotIdx) => {
+                    const slotImg = prodImages[slotIdx];
+                    const isPrimary = prodImage === slotImg || (slotIdx === 0 && !prodImage);
+
+                    return (
+                      <div
+                        key={slotIdx}
+                        className={`p-3 rounded-xl border flex flex-col justify-between space-y-2.5 transition-all bg-white ${
+                          isPrimary
+                            ? 'border-[#7c3aed] ring-2 ring-purple-100 shadow-xs'
+                            : 'border-zinc-200 hover:border-zinc-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="font-bold text-zinc-700">Slot {slotIdx + 1}</span>
+                          {slotImg && isPrimary && (
+                            <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-bold">
+                              ★ Primary
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Image Preview Box */}
+                        <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-zinc-100 border border-zinc-200">
+                          {slotImg ? (
+                            <img
+                              src={slotImg}
+                              alt={`Slot ${slotIdx + 1}`}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 text-[11px] p-2 text-center">
+                              <ImageIcon className="w-6 h-6 mb-1 text-zinc-300" />
+                              <span>Empty Slot</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Slot URL Input */}
+                        <input
+                          type="text"
+                          value={slotImg || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setProdImages((prev) => {
+                              const next = [...prev];
+                              next[slotIdx] = val;
+                              return next;
+                            });
+                            if (slotIdx === 0 && !prodImage) setProdImage(val);
+                          }}
+                          placeholder="/src/assets/... or URL"
+                          className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-300 rounded text-[11px] font-mono text-zinc-900 focus:outline-none focus:border-[#7c3aed]"
+                        />
+
+                        {/* Actions for Slot: Upload, Set Primary, Delete, Reorder */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <label className="cursor-pointer px-2 py-1 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded text-[10px] font-mono text-zinc-800 flex items-center gap-1 transition-colors">
+                            <Upload className="w-3 h-3 text-[#7c3aed]" />
+                            <span>Upload</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleGallerySlotUpload(slotIdx, file);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {slotImg && (
+                            <>
+                              {!isPrimary && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryImage(slotIdx)}
+                                  className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded text-[10px] font-mono font-semibold"
+                                  title="Make this the primary catalog card image"
+                                >
+                                  ★ Primary
+                                </button>
+                              )}
+
+                              {slotIdx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveGalleryImage(slotIdx, 'left')}
+                                  className="p-1 bg-zinc-100 hover:bg-zinc-200 rounded text-zinc-600"
+                                  title="Move Left"
+                                >
+                                  ←
+                                </button>
+                              )}
+
+                              {slotIdx < prodImages.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveGalleryImage(slotIdx, 'right')}
+                                  className="p-1 bg-zinc-100 hover:bg-zinc-200 rounded text-zinc-600"
+                                  title="Move Right"
+                                >
+                                  →
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteGalleryImage(slotIdx)}
+                                className="p-1 bg-red-50 hover:bg-red-100 text-red-600 rounded ml-auto"
+                                title="Delete image from gallery"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. GST INFORMATION & HSN TAX DETAILS (USER REQUIREMENT) */}
               <div className="p-4 rounded-xl bg-purple-50/70 border border-purple-200 space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Receipt className="w-4 h-4 text-[#7c3aed]" />
                     <span className="text-xs uppercase font-mono text-purple-900 font-bold tracking-wide">
-                      GST & HSN Tax Portal (India GST Compliance)
+                      GST & HSN Tax Information
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-purple-700 bg-purple-100 px-2 py-0.5 rounded border border-purple-200">
-                    Live Calculation
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1">
-                      GST Tax Slab Rate
-                    </label>
-                    <select
-                      value={prodGstRate}
-                      onChange={(e) => setProdGstRate(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
-                    >
-                      <option value={5}>5% (Apparel ≤ ₹1,000)</option>
-                      <option value={12}>12% (Standard Streetwear &gt; ₹1,000)</option>
-                      <option value={18}>18% (Luxury & Heavy Terry)</option>
-                      <option value={0}>0% (Tax Exempt)</option>
-                      <option value={28}>28% (Special Category)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1">
-                      Apparel HSN Code
-                    </label>
+                  
+                  {/* GST Applicability Switch */}
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-mono">
                     <input
-                      type="text"
-                      value={prodHsnCode}
-                      onChange={(e) => setProdHsnCode(e.target.value)}
-                      placeholder="e.g. 6109"
-                      className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
+                      type="checkbox"
+                      checked={prodGstApplicable}
+                      onChange={(e) => setProdGstApplicable(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#7c3aed] focus:ring-[#7c3aed] bg-white border-zinc-300"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1">
-                      Tax Pricing Scheme
-                    </label>
-                    <select
-                      value={prodTaxInclusive ? 'inclusive' : 'exclusive'}
-                      onChange={(e) => setProdTaxInclusive(e.target.value === 'inclusive')}
-                      className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
-                    >
-                      <option value="inclusive">GST Inclusive (MRP includes tax)</option>
-                      <option value="exclusive">GST Exclusive (Add tax to base)</option>
-                    </select>
-                  </div>
+                    <span className="text-purple-950 font-bold">GST Applicable</span>
+                  </label>
                 </div>
 
-                {/* Apparel HSN Presets */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase">Apparel HSN Presets:</span>
-                  {[
-                    { code: '6109', label: 'T-Shirts (6109)' },
-                    { code: '6110', label: 'Hoodies (6110)' },
-                    { code: '6203', label: 'Cargos (6203)' },
-                    { code: '6205', label: 'Shirts (6205)' },
-                  ].map((preset) => (
-                    <button
-                      key={preset.code}
-                      type="button"
-                      onClick={() => setProdHsnCode(preset.code)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                        prodHsnCode === preset.code
-                          ? 'bg-[#7c3aed] border-[#7c3aed] text-white font-bold'
-                          : 'bg-white border-zinc-300 text-zinc-700 hover:text-zinc-950'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+                {prodGstApplicable && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1 font-semibold">
+                          GST Rate (%)
+                        </label>
+                        <select
+                          value={prodGstRate}
+                          onChange={(e) => setProdGstRate(Number(e.target.value))}
+                          className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
+                        >
+                          <option value={5}>5% (Apparel ≤ ₹1,000)</option>
+                          <option value={12}>12% (Standard Streetwear &gt; ₹1,000)</option>
+                          <option value={18}>18% (Luxury & Heavy Outerwear)</option>
+                          <option value={0}>0% (Exempt)</option>
+                          <option value={28}>28% (Special)</option>
+                        </select>
+                      </div>
 
-                {/* Live Tax Breakdown Card */}
-                {Number(prodPrice) > 0 && (
-                  <div className="p-3 rounded-xl bg-white border border-purple-200/80 text-xs font-mono space-y-1.5 shadow-xs">
-                    <div className="flex justify-between text-zinc-600">
-                      <span>Base / Taxable Value:</span>
-                      <span className="text-zinc-950 font-bold">
-                        ₹
-                        {(prodTaxInclusive
-                          ? Math.round((Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
-                          : Number(prodPrice)
-                        ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
+                      <div>
+                        <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1 font-semibold">
+                          HSN/SAC Code
+                        </label>
+                        <input
+                          type="text"
+                          value={prodHsnCode}
+                          onChange={(e) => setProdHsnCode(e.target.value)}
+                          placeholder="e.g. 6109"
+                          className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] uppercase font-mono text-zinc-600 mb-1 font-semibold">
+                          Tax Pricing Scheme
+                        </label>
+                        <select
+                          value={prodTaxInclusive ? 'inclusive' : 'exclusive'}
+                          onChange={(e) => setProdTaxInclusive(e.target.value === 'inclusive')}
+                          className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed]"
+                        >
+                          <option value="inclusive">Tax-Inclusive (Price includes GST)</option>
+                          <option value="exclusive">Tax-Exclusive (Add GST to base price)</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between text-zinc-600">
-                      <span>Total GST ({prodGstRate}% · HSN {prodHsnCode || '—'}):</span>
-                      <span className="text-purple-700 font-bold">
-                        ₹
-                        {(prodTaxInclusive
-                          ? Math.round((Number(prodPrice) - Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
-                          : Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100
-                        ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
+                    {/* Apparel HSN Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase">Apparel HSN Presets:</span>
+                      {[
+                        { code: '6109', label: 'T-Shirts (6109)' },
+                        { code: '6110', label: 'Hoodies (6110)' },
+                        { code: '6203', label: 'Cargos (6203)' },
+                        { code: '6205', label: 'Shirts (6205)' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.code}
+                          type="button"
+                          onClick={() => setProdHsnCode(preset.code)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
+                            prodHsnCode === preset.code
+                              ? 'bg-[#7c3aed] border-[#7c3aed] text-white font-bold'
+                              : 'bg-white border-zinc-300 text-zinc-700 hover:text-zinc-950'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
                     </div>
 
-                    <div className="flex justify-between text-[11px] text-zinc-500 pl-2 border-l-2 border-purple-400">
-                      <span>CGST ({(prodGstRate / 2).toFixed(1)}%) + SGST ({(prodGstRate / 2).toFixed(1)}%):</span>
-                      <span>
-                        2 × ₹
-                        {(
-                          (prodTaxInclusive
-                            ? Math.round((Number(prodPrice) - Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
-                            : Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100) / 2
-                        ).toFixed(2)}
-                      </span>
-                    </div>
+                    {/* Live Tax Breakdown Card */}
+                    {Number(prodPrice) > 0 && (
+                      <div className="p-3 rounded-xl bg-white border border-purple-200/80 text-xs font-mono space-y-1.5 shadow-xs">
+                        <div className="flex justify-between text-zinc-600">
+                          <span>Product Price Before Tax (Base):</span>
+                          <span className="text-zinc-950 font-bold">
+                            ₹
+                            {(prodTaxInclusive
+                              ? Math.round((Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
+                              : Number(prodPrice)
+                            ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
 
-                    <div className="flex justify-between pt-1 border-t border-zinc-200 text-zinc-950 font-bold">
-                      <span>Customer Retail Price (MRP):</span>
-                      <span className="text-emerald-700">
-                        ₹
-                        {(prodTaxInclusive
-                          ? Number(prodPrice)
-                          : Number(prodPrice) + Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100
-                        ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
+                        <div className="flex justify-between text-zinc-600">
+                          <span>Applicable GST Amount ({prodGstRate}% · HSN {prodHsnCode || '—'}):</span>
+                          <span className="text-purple-700 font-bold">
+                            ₹
+                            {(prodTaxInclusive
+                              ? Math.round((Number(prodPrice) - Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
+                              : Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100
+                            ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between text-[11px] text-zinc-500 pl-2 border-l-2 border-purple-400">
+                          <span>CGST ({(prodGstRate / 2).toFixed(1)}%) + SGST ({(prodGstRate / 2).toFixed(1)}%):</span>
+                          <span>
+                            2 × ₹
+                            {(
+                              (prodTaxInclusive
+                                ? Math.round((Number(prodPrice) - Number(prodPrice) / (1 + prodGstRate / 100)) * 100) / 100
+                                : Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100) / 2
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between pt-1 border-t border-zinc-200 text-zinc-950 font-bold">
+                          <span>Final Customer Retail Price (MRP):</span>
+                          <span className="text-emerald-700 font-bold text-sm">
+                            ₹
+                            {(prodTaxInclusive
+                              ? Number(prodPrice)
+                              : Number(prodPrice) + Math.round((Number(prodPrice) * (prodGstRate / 100)) * 100) / 100
+                            ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
-              {/* Photo Upload & Preview */}
+              {/* 4. DESCRIPTION & MATERIAL/FABRIC */}
               <div>
                 <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
-                  Product Image (File Upload or URL)
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={prodImage}
-                    onChange={(e) => setProdImage(e.target.value)}
-                    placeholder="/src/assets/images/... or image URL"
-                    className="flex-1 px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed] focus:bg-white"
-                  />
-                  <label className="cursor-pointer px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 text-xs font-bold uppercase flex items-center gap-1.5 transition-colors">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{isUploadingImage ? 'Uploading...' : 'Upload'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
-                  Description
+                  Product Description *
                 </label>
                 <textarea
                   rows={3}
@@ -2306,20 +2976,93 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
-                  Fabric Details & Specs
-                </label>
-                <input
-                  type="text"
-                  value={prodFabric}
-                  onChange={(e) => setProdFabric(e.target.value)}
-                  placeholder="300 GSM 100% Portuguese Terry Cotton · Pre-shrunk"
-                  className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Material / Fabric Information
+                  </label>
+                  <input
+                    type="text"
+                    value={prodFabric}
+                    onChange={(e) => setProdFabric(e.target.value)}
+                    placeholder="100% Combed Portuguese Terry Cotton"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    GSM (Grams Per Square Meter)
+                  </label>
+                  <input
+                    type="text"
+                    value={prodGsm}
+                    onChange={(e) => setProdGsm(e.target.value)}
+                    placeholder="e.g. 280 or 480"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
               </div>
 
-              {/* USER REQUIREMENTS: Shipping Charge Editor, Pieces Available Editor, and Auto-Generated Website Product Link */}
+              {/* 5. COLOURS & SIZES */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Available Colours (Comma Separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={prodColors}
+                    onChange={(e) => setProdColors(e.target.value)}
+                    placeholder="Deep Onyx Black, Slate Grey, Electric Violet"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Product Tags (Comma Separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={prodTags}
+                    onChange={(e) => setProdTags(e.target.value)}
+                    placeholder="Oversized, Heavyweight, Streetwear, Drop 01"
+                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* 6. FEATURES & CARE INSTRUCTIONS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Product Features (One per line)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={prodFeatures}
+                    onChange={(e) => setProdFeatures(e.target.value)}
+                    placeholder="280 GSM Combed Heavy Cotton&#10;Dropped Shoulder Boxy Cut&#10;Pre-Shrunk Bio-Washed&#10;Reinforced Collar Ribbing"
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-mono text-zinc-600 mb-1">
+                    Care Instructions
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={prodCareInstructions}
+                    onChange={(e) => setProdCareInstructions(e.target.value)}
+                    placeholder="Cold machine wash inside out with similar colors. Do not bleach. Dry flat in shade. Iron on reverse."
+                    className="w-full px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 text-xs focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* 7. INVENTORY, SHIPPING CHARGE & WEBSITE PRODUCT LINK */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-purple-50/70 border border-purple-200">
                 <div>
                   <label className="block text-xs uppercase font-mono text-purple-900 font-bold mb-1">
@@ -2337,13 +3080,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
                   <span className="text-[10px] text-zinc-500 mt-1 block">
-                    Shipping charge editor: enter ₹0 for Free Delivery or custom fee.
+                    Enter ₹0 for Free Delivery or custom fee.
                   </span>
                 </div>
 
                 <div>
                   <label className="block text-xs uppercase font-mono text-purple-900 font-bold mb-1">
-                    Pieces Available (Inventory Units) *
+                    Inventory Quantity (Pieces Available) *
                   </label>
                   <input
                     type="number"
@@ -2355,7 +3098,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-lg text-zinc-900 text-sm font-mono focus:outline-none focus:border-[#7c3aed]"
                   />
                   <span className="text-[10px] text-zinc-500 mt-1 block">
-                    How many pieces editor: set exact available stock units.
+                    Total stock units available in atelier warehouse.
                   </span>
                 </div>
 
@@ -2396,9 +3139,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </a>
                     )}
                   </div>
-                  <span className="text-[10px] text-zinc-500 mt-1 block">
-                    Unique direct URL for customers to access and buy this exact item on our website.
-                  </span>
                 </div>
               </div>
 
@@ -2411,16 +3151,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="w-4 h-4 rounded text-[#7c3aed] focus:ring-[#7c3aed] bg-white border-zinc-300"
                   />
                   <span className="text-zinc-900 font-medium">Add to New Launch Section</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs">
-                  <input
-                    type="checkbox"
-                    checked={prodInStock}
-                    onChange={(e) => setProdInStock(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#7c3aed] focus:ring-[#7c3aed] bg-white border-zinc-300"
-                  />
-                  <span className="text-zinc-900 font-medium">In Stock</span>
                 </label>
               </div>
 

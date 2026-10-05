@@ -29,7 +29,8 @@ interface CustomerAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCustomer: Customer | null;
-  onCustomerLogin: (customer: Customer) => void;
+  customerToken?: string | null;
+  onCustomerLogin: (customer: Customer, token?: string) => void;
   onCustomerLogout: () => void;
   initialTab?: 'profile' | 'orders';
   onTrackOrder?: (orderNumber: string) => void;
@@ -48,6 +49,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   isOpen,
   onClose,
   currentCustomer,
+  customerToken,
   onCustomerLogin,
   onCustomerLogout,
   initialTab = 'profile',
@@ -108,20 +110,29 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
     }
   }, [currentCustomer, isOpen, initialTab]);
 
-  // Fetch orders for customer
+  // Fetch orders for customer using secure Bearer authentication
   const fetchCustomerOrders = async () => {
-    if (!currentCustomer) return;
+    if (!currentCustomer) {
+      setOrders([]);
+      return;
+    }
     setIsLoadingOrders(true);
     try {
-      const qPhone = encodeURIComponent(currentCustomer.phone);
-      const qEmail = encodeURIComponent(currentCustomer.email || '');
-      const res = await fetch(`/api/customers/orders?phone=${qPhone}&email=${qEmail}`);
+      const token = customerToken || localStorage.getItem('ziproo_customer_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/api/customers/orders', { headers });
       if (res.ok) {
         const data = await res.json();
         setOrders(data.orders || []);
+      } else if (res.status === 401 || res.status === 403) {
+        setOrders([]);
       }
     } catch (err) {
       console.error('Failed to fetch customer orders:', err);
+      setOrders([]);
     } finally {
       setIsLoadingOrders(false);
     }
@@ -130,6 +141,8 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   useEffect(() => {
     if (isOpen && currentCustomer && activeTab === 'orders') {
       fetchCustomerOrders();
+    } else if (!currentCustomer) {
+      setOrders([]);
     }
   }, [isOpen, currentCustomer, activeTab]);
 
@@ -138,7 +151,15 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   const handleLogoutClick = () => {
     onCustomerLogout();
     setOrders([]);
+    try {
+      localStorage.removeItem('ziproo_customer_token');
+      localStorage.removeItem('ziproo_customer');
+    } catch {
+      // Storage fallback
+    }
     setSuccessMsg('You have successfully logged out.');
+    setActiveTab('orders');
+    setAuthMode('login');
     setTimeout(() => {
       setSuccessMsg('');
     }, 1500);
@@ -177,7 +198,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
         throw new Error(data.error || 'Failed to authenticate');
       }
 
-      onCustomerLogin(data.customer);
+      onCustomerLogin(data.customer, data.token);
       setSuccessMsg(data.message || `Welcome back, ${data.customer.name}!`);
       setActiveTab('orders');
     } catch (err: any) {
@@ -376,13 +397,13 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
         {/* ================= UNAUTHENTICATED: EMAIL LOGIN ================= */}
         {!currentCustomer && authMode === 'login' && (
           <div className="space-y-4 py-2">
-            <div className="p-5 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-2">
-              <div className="flex items-center gap-2 text-purple-900 font-bold text-sm">
+            <div className="p-5 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-2 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-purple-900 font-bold text-sm">
                 <Package className="w-4 h-4 text-[#7c3aed]" />
-                <span>Access Your Order History & Live Tracking</span>
+                <span>Please sign in to view your orders.</span>
               </div>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Enter your registered customer email address to securely access your orders, track dispatch status, and receive real-time updates.
+                Sign in with your registered customer email to securely view your order history, delivery status, and payment tracking.
               </p>
             </div>
 
@@ -634,9 +655,11 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
             ) : orders.length === 0 ? (
               <div className="py-12 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-center space-y-3">
                 <Package className="w-10 h-10 mx-auto text-zinc-400" />
-                <h4 className="text-sm font-bold text-zinc-950 uppercase tracking-wide">No Orders Found</h4>
+                <h4 className="text-sm font-bold text-zinc-950 uppercase tracking-wide">
+                  You haven't placed any orders yet.
+                </h4>
                 <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                  No orders have been recorded under {currentCustomer.email || currentCustomer.phone} yet. Explore the latest drop to create your identity.
+                  When you place an order, your order history, delivery status, and items will appear here.
                 </p>
                 {onNavigateToShop && (
                   <button

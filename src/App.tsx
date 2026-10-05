@@ -10,16 +10,55 @@ import { NewLaunchPage } from './pages/NewLaunchPage.js';
 import { AboutUsPage } from './pages/AboutUsPage.js';
 import { StayConnectedPage } from './pages/StayConnectedPage.js';
 import { AdminDashboard } from './pages/AdminDashboard.js';
+import { SellerPortalPage } from './pages/SellerPortalPage.js';
 import { CartDrawer } from './components/CartDrawer.js';
 import { CheckoutModal } from './components/CheckoutModal.js';
 import { SearchModal } from './components/SearchModal.js';
 import { SizePromptModal } from './components/SizePromptModal.js';
 import { CustomerAuthModal } from './components/CustomerAuthModal.js';
 import { TrackOrderModal } from './components/TrackOrderModal.js';
+import { ProductDetailsModal } from './components/ProductDetailsModal.js';
 import { MovingSloganBar } from './components/MovingSloganBar.js';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<string>('home');
+  const [currentPage, setCurrentPage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/seller')) return 'seller';
+      if (path === '/admin') return 'admin';
+      if (path === '/shop') return 'shop';
+      if (path === '/story') return 'story';
+      if (path === '/new-launch') return 'new-launch';
+      if (path === '/about') return 'about';
+      if (path === '/connect') return 'connect';
+    }
+    return 'home';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/seller')) {
+        setCurrentPage('seller');
+      } else if (path === '/admin') {
+        setCurrentPage('admin');
+      } else if (path === '/shop') {
+        setCurrentPage('shop');
+      } else if (path === '/story') {
+        setCurrentPage('story');
+      } else if (path === '/new-launch') {
+        setCurrentPage('new-launch');
+      } else if (path === '/about') {
+        setCurrentPage('about');
+      } else if (path === '/connect') {
+        setCurrentPage('connect');
+      } else {
+        setCurrentPage('home');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [products, setProducts] = useState<Product[]>([]);
   const [updates, setUpdates] = useState<CompanyUpdate[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({
@@ -212,6 +251,26 @@ export default function App() {
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      if (page === 'seller') {
+        const hasSellerToken = !!localStorage.getItem('ziproo_seller_token');
+        const target = hasSellerToken ? '/seller/dashboard' : '/seller/login';
+        if (window.location.pathname !== target) {
+          window.history.pushState({}, '', target);
+        }
+      } else if (page === 'home') {
+        if (window.location.pathname !== '/') {
+          window.history.pushState({}, '', '/');
+        }
+      } else {
+        const target = `/${page}`;
+        if (window.location.pathname !== target) {
+          window.history.pushState({}, '', target);
+        }
+      }
+    } catch {
+      // Ignored
+    }
   };
 
   // Cart operations
@@ -405,6 +464,7 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         adminUser={adminUser}
         onOpenAdmin={() => handleNavigate('admin')}
+        onOpenSellerPortal={() => handleNavigate('seller')}
         onOpenSearch={() => setIsSearchOpen(true)}
         customer={customer}
         onOpenCustomerAuth={() => {
@@ -429,7 +489,7 @@ export default function App() {
             onNavigate={handleNavigate}
             products={products}
             settings={settings}
-            onSelectProduct={(p) => setSizePromptProduct(p)}
+            onSelectProduct={(p) => setSelectedProductModal(p)}
           />
         )}
 
@@ -497,6 +557,13 @@ export default function App() {
             onRefreshOrders={() => adminToken && fetchOrders(adminToken)}
           />
         )}
+
+        {currentPage === 'seller' && (
+          <SellerPortalPage
+            onNavigateHome={() => handleNavigate('home')}
+            onNavigateToShop={() => handleNavigate('shop')}
+          />
+        )}
       </main>
 
       {/* 4. FOOTER */}
@@ -527,6 +594,7 @@ export default function App() {
         items={cart}
         settings={settings}
         currentCustomer={customer}
+        customerToken={customerToken}
         onOpenCustomerLogin={() => setIsCustomerModalOpen(true)}
         onOrderCompleted={(_order) => {
           setCart([]);
@@ -541,7 +609,10 @@ export default function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         products={products}
-        onSelectProduct={(p) => setSizePromptProduct(p)}
+        onSelectProduct={(p) => {
+          setSelectedProductModal(p);
+          setIsSearchOpen(false);
+        }}
         onNavigateToShopWithQuery={(q) => {
           setShopInitialSearch(q);
           handleNavigate('shop');
@@ -594,6 +665,24 @@ export default function App() {
         isOpen={isTrackingModalOpen}
         onClose={() => setIsTrackingModalOpen(false)}
         initialOrderNumber={trackingOrderNumber}
+      />
+
+      {/* 11. COMPLETE PRODUCT DETAILS & IMAGE GALLERY MODAL */}
+      <ProductDetailsModal
+        product={selectedProductModal}
+        isOpen={Boolean(selectedProductModal)}
+        onClose={() => setSelectedProductModal(null)}
+        onAddToCart={(prod, size, quantity) => {
+          handleAddToCart(prod, size, quantity);
+        }}
+        onBuyNow={(prod, size) => {
+          handleAddToCart(prod, size, 1);
+          setSelectedProductModal(null);
+          setIsCheckoutOpen(true);
+        }}
+        onProductUpdated={(updated) => {
+          setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        }}
       />
     </div>
   );

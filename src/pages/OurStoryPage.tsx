@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CompanyUpdate, AdminUser } from '../types/index.js';
-import { Calendar, Tag, Plus, Edit2, Trash2, CheckCircle2, Sparkles } from 'lucide-react';
+import {
+  Calendar,
+  Tag,
+  Plus,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  Sparkles,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Play,
+  ZoomIn,
+} from 'lucide-react';
 
 interface OurStoryPageProps {
   updates: CompanyUpdate[];
@@ -33,6 +47,69 @@ export const OurStoryPage: React.FC<OurStoryPageProps> = ({
   const [mediaUploading, setMediaUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Full-screen Story Media Lightbox / Video Player State
+  const [activeMediaViewer, setActiveMediaViewer] = useState<{
+    update: CompanyUpdate;
+    type: 'image' | 'video';
+  } | null>(null);
+
+  // All updates with media for navigation
+  const mediaUpdates = updates.filter((u) => u.imageUrl || u.videoUrl);
+
+  const currentMediaIndex = activeMediaViewer
+    ? mediaUpdates.findIndex((u) => u.id === activeMediaViewer.update.id)
+    : -1;
+
+  const handlePrevMedia = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentMediaIndex > 0) {
+      const prev = mediaUpdates[currentMediaIndex - 1];
+      setActiveMediaViewer({
+        update: prev,
+        type: prev.imageUrl ? 'image' : 'video',
+      });
+    } else if (mediaUpdates.length > 1) {
+      const last = mediaUpdates[mediaUpdates.length - 1];
+      setActiveMediaViewer({
+        update: last,
+        type: last.imageUrl ? 'image' : 'video',
+      });
+    }
+  };
+
+  const handleNextMedia = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentMediaIndex >= 0 && currentMediaIndex < mediaUpdates.length - 1) {
+      const next = mediaUpdates[currentMediaIndex + 1];
+      setActiveMediaViewer({
+        update: next,
+        type: next.imageUrl ? 'image' : 'video',
+      });
+    } else if (mediaUpdates.length > 1) {
+      const first = mediaUpdates[0];
+      setActiveMediaViewer({
+        update: first,
+        type: first.imageUrl ? 'image' : 'video',
+      });
+    }
+  };
+
+  // Keyboard navigation for story media viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!activeMediaViewer) return;
+      if (e.key === 'Escape') {
+        setActiveMediaViewer(null);
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevMedia();
+      } else if (e.key === 'ArrowRight') {
+        handleNextMedia();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeMediaViewer, currentMediaIndex, mediaUpdates]);
 
   const handleStartPublish = () => {
     setTitle('');
@@ -209,21 +286,30 @@ export const OurStoryPage: React.FC<OurStoryPageProps> = ({
                       {update.content}
                     </p>
 
-                    {/* Image Attachment */}
+                    {/* Image Attachment (Click to open Fullscreen Lightbox) */}
                     {update.imageUrl && (
-                      <div className="rounded-xl overflow-hidden border border-zinc-200 mt-3 max-h-96 bg-zinc-100">
+                      <div
+                        onClick={() => setActiveMediaViewer({ update, type: 'image' })}
+                        className="relative rounded-2xl overflow-hidden border border-zinc-200 mt-3 max-h-96 bg-zinc-100 cursor-pointer group/img shadow-xs"
+                      >
                         <img
                           src={update.imageUrl}
                           alt={update.title}
                           referrerPolicy="no-referrer"
-                          className="w-full h-auto max-h-96 object-cover"
+                          className="w-full h-auto max-h-96 object-cover group-hover/img:scale-102 transition-transform duration-300"
                         />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/95 text-zinc-950 text-xs font-mono font-bold shadow-lg">
+                            <ZoomIn className="w-4 h-4 text-[#7c3aed]" />
+                            <span>Open Fullscreen Viewer</span>
+                          </span>
+                        </div>
                       </div>
                     )}
 
-                    {/* Video Attachment */}
+                    {/* Video Attachment (Click to open Fullscreen Player) */}
                     {update.videoUrl && (
-                      <div className="rounded-xl overflow-hidden border border-zinc-200 mt-3 bg-black">
+                      <div className="relative rounded-2xl overflow-hidden border border-zinc-200 mt-3 bg-black shadow-xs group/vid">
                         {update.videoUrl.includes('youtube.com') || update.videoUrl.includes('youtu.be') ? (
                           <iframe
                             src={update.videoUrl.replace('watch?v=', 'embed/')}
@@ -232,12 +318,23 @@ export const OurStoryPage: React.FC<OurStoryPageProps> = ({
                             allowFullScreen
                           />
                         ) : (
-                          <video
-                            controls
-                            src={update.videoUrl}
-                            className="w-full max-h-96 bg-black"
-                            preload="metadata"
-                          />
+                          <div className="relative">
+                            <video
+                              controls
+                              src={update.videoUrl}
+                              className="w-full max-h-96 bg-black object-contain"
+                              preload="metadata"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setActiveMediaViewer({ update, type: 'video' })}
+                              className="absolute top-3 right-3 p-2 rounded-xl bg-black/70 hover:bg-black text-white text-xs font-mono flex items-center gap-1.5 transition-all shadow-md backdrop-blur-xs"
+                              title="Watch Fullscreen"
+                            >
+                              <Maximize2 className="w-4 h-4 text-[#7c3aed]" />
+                              <span className="hidden sm:inline">Fullscreen</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
@@ -495,34 +592,98 @@ export const OurStoryPage: React.FC<OurStoryPageProps> = ({
         </div>
       )}
 
-      {/* Delete Confirmation Modal (Admin only) */}
-      {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white border border-zinc-200 rounded-2xl p-6 space-y-4 shadow-2xl">
-            <h4 className="text-base font-bold uppercase font-display text-zinc-950">
-              Delete Daily Chronicle?
-            </h4>
-            <p className="text-xs text-zinc-600 leading-relaxed">
-              This update record and associated media will be permanently deleted from the atelier feed. This action is restricted to verified administrators.
+      {/* ================= STORY FULLSCREEN IMAGE & VIDEO VIEWER ================= */}
+      {activeMediaViewer && (
+        <div className="fixed inset-0 z-60 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in">
+          {/* Header Bar */}
+          <div className="w-full max-w-6xl mx-auto flex items-center justify-between text-white pb-3 border-b border-white/10 z-10">
+            <div className="min-w-0 pr-4">
+              <div className="flex items-center gap-2 text-xs font-mono text-[#7c3aed]">
+                <span className="uppercase tracking-widest font-bold">ZIPROO STORY ARCHIVE</span>
+                <span className="text-zinc-500">·</span>
+                <span className="text-zinc-300">{activeMediaViewer.update.category}</span>
+                <span className="text-zinc-500">·</span>
+                <span className="text-zinc-400">{activeMediaViewer.update.date}</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight truncate mt-0.5">
+                {activeMediaViewer.update.title}
+              </h3>
+            </div>
+
+            <button
+              onClick={() => setActiveMediaViewer(null)}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0"
+              title="Close viewer (ESC)"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Main Media Stage (Preserving aspect ratio without unnecessary cropping) */}
+          <div className="relative flex-1 w-full max-w-6xl mx-auto flex items-center justify-center p-2 sm:p-6 overflow-hidden">
+            {activeMediaViewer.type === 'image' && activeMediaViewer.update.imageUrl ? (
+              <img
+                src={activeMediaViewer.update.imageUrl}
+                alt={activeMediaViewer.update.title}
+                referrerPolicy="no-referrer"
+                className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl"
+              />
+            ) : activeMediaViewer.type === 'video' && activeMediaViewer.update.videoUrl ? (
+              activeMediaViewer.update.videoUrl.includes('youtube.com') || activeMediaViewer.update.videoUrl.includes('youtu.be') ? (
+                <iframe
+                  src={activeMediaViewer.update.videoUrl.replace('watch?v=', 'embed/')}
+                  title={activeMediaViewer.update.title}
+                  className="w-full max-w-4xl aspect-video rounded-2xl shadow-2xl"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  controls
+                  autoPlay
+                  src={activeMediaViewer.update.videoUrl}
+                  className="max-h-[75vh] max-w-full aspect-video object-contain bg-black rounded-2xl shadow-2xl"
+                />
+              )
+            ) : null}
+
+            {/* Next / Previous Navigation if multiple media updates exist */}
+            {mediaUpdates.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevMedia}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center border border-white/20 shadow-xl transition-all"
+                  title="Previous story post (Left Arrow)"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMedia}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center border border-white/20 shadow-xl transition-all"
+                  title="Next story post (Right Arrow)"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Footer Metadata & Narrative */}
+          <div className="w-full max-w-3xl mx-auto pt-3 border-t border-white/10 text-center text-xs space-y-1 text-zinc-300">
+            <p className="line-clamp-2 max-w-xl mx-auto text-zinc-400">
+              {activeMediaViewer.update.content}
             </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setDeletingId(null)}
-                className="px-4 py-2 text-xs font-semibold text-zinc-500 hover:text-black"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  if (deletingId) {
-                    await onDeleteUpdate(deletingId);
-                    setDeletingId(null);
-                  }
-                }}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs"
-              >
-                Delete
-              </button>
+            <div className="flex items-center justify-center gap-3 text-[11px] font-mono text-zinc-500">
+              <span>Dispatched by {activeMediaViewer.update.author}</span>
+              {mediaUpdates.length > 1 && (
+                <>
+                  <span>·</span>
+                  <span className="text-[#7c3aed]">
+                    Post {currentMediaIndex + 1} of {mediaUpdates.length}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

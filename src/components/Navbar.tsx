@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ZiprooLogo } from './ZiprooLogo.js';
 import { ZMonogramLogo } from './ZMonogramLogo.js';
-import { ShoppingBag, Search, ShieldCheck, Menu, X, ArrowRight, User, LogOut, PackageCheck, Package } from 'lucide-react';
+import { ShoppingBag, Search, ShieldCheck, Menu, X, ArrowRight, User, LogOut, PackageCheck, Package, Store } from 'lucide-react';
 import type { AdminUser, Customer } from '../types/index.js';
 
 interface NavbarProps {
@@ -17,6 +17,7 @@ interface NavbarProps {
   onCustomerLogout?: () => void;
   onOpenTrackOrder?: () => void;
   onOpenCustomerOrders?: () => void;
+  onOpenSellerPortal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onCustomerLogout,
   onOpenTrackOrder,
   onOpenCustomerOrders,
+  onOpenSellerPortal,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -170,6 +172,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
+            {/* Seller Portal Entrance */}
+            {onOpenSellerPortal && (
+              <button
+                onClick={onOpenSellerPortal}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all shadow-xs ${
+                  currentPage === 'seller'
+                    ? 'bg-[#7c3aed] border-[#7c3aed] text-white shadow-xs'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:text-zinc-950 hover:border-zinc-300'
+                }`}
+                title="ZIPROO Seller Portal (/seller/dashboard)"
+              >
+                <Store className={`w-3.5 h-3.5 ${currentPage === 'seller' ? 'text-white' : 'text-[#7c3aed]'}`} />
+                <span className="hidden md:inline font-mono">Seller Portal</span>
+              </button>
+            )}
+
             {/* Admin Entrance */}
             <button
               onClick={onOpenAdmin}
@@ -269,6 +287,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="flex items-center gap-2">
                   <PackageCheck className="w-4 h-4 text-[#7c3aed]" />
                   <span>Track Your Order</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 opacity-50" />
+              </button>
+            )}
+
+            {onOpenSellerPortal && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenSellerPortal();
+                }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg border text-xs font-mono font-bold ${
+                  currentPage === 'seller'
+                    ? 'bg-[#7c3aed] text-white border-[#7c3aed]'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-zinc-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Store className={`w-4 h-4 ${currentPage === 'seller' ? 'text-white' : 'text-[#7c3aed]'}`} />
+                  <span>Seller Portal (/seller/dashboard)</span>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 opacity-50" />
               </button>

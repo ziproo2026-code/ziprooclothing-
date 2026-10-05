@@ -20,35 +20,38 @@ export const HomePage: React.FC<HomePageProps> = ({
   const headline = 'CREATE YOUR IDENTITY';
   const newLaunches = products.filter((p) => p.isNewLaunch).slice(0, 4);
 
-  // Intro video automatically plays on first session visit or when user clicks "Play Intro"
+  // Intro video automatically plays on entry / reload and stays off during normal navigation
   const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
     try {
-      const hasSeen = sessionStorage.getItem('ziproo_intro_viewed');
-      if (!hasSeen) {
+      const hasViewedInCurrentNav = sessionStorage.getItem('ziproo_intro_viewed_nav');
+      if (!hasViewedInCurrentNav) {
         setShowIntro(true);
       }
     } catch {
-      // Fallback
+      setShowIntro(true);
     }
   }, []);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
     try {
-      sessionStorage.setItem('ziproo_intro_viewed', 'true');
+      sessionStorage.setItem('ziproo_intro_viewed_nav', 'true');
     } catch {
       // Storage unavailable
     }
   };
 
+  const introVideoUrl = settings?.introVideoUrl || '/intro_video.mp4';
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-zinc-900">
-      {/* 0. Fullscreen Cinematic Streetwear Intro Video on Entry */}
+      {/* 0. Fullscreen Cinematic Brand Intro Video (The Only Website Intro Video) */}
       <IntroVideoExperience
         isOpen={showIntro}
         onComplete={handleIntroComplete}
+        videoUrl={introVideoUrl}
       />
 
       {/* 1. HERO SECTION - Clean, Minimal & Prominent "CREATE YOUR IDENTITY" */}
@@ -102,8 +105,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 
             <button
               onClick={() => setShowIntro(true)}
-              className="group inline-flex items-center gap-2 px-5 py-4 text-xs font-semibold tracking-wider uppercase text-purple-700 hover:text-purple-900 border border-purple-200 hover:border-purple-400 rounded-xl bg-purple-50 hover:bg-purple-100 backdrop-blur-sm transition-all whitespace-nowrap active:scale-98 shadow-xs"
-              title="Watch full cinematic intro"
+              className="group inline-flex items-center gap-2 px-5 py-4 text-xs font-semibold tracking-wider uppercase text-purple-700 hover:text-purple-900 border border-purple-300 hover:border-purple-500 rounded-xl bg-purple-50 hover:bg-purple-100 backdrop-blur-sm transition-all whitespace-nowrap active:scale-98 shadow-sm"
+              title="Watch ZIPROO Intro Video"
             >
               <Play className="w-3.5 h-3.5 fill-current text-purple-600 group-hover:text-purple-700 transition-colors" />
               <span>Watch Intro</span>
