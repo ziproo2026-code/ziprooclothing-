@@ -7,7 +7,9 @@
       "role": "Founder & Creative Director",
       "salt": "f7843e1c96807784f4642a487ad438e7",
       "hash": "26a4a6b6c0f98a0e44c44de34daa2d413558eb7db1c0a02b907810361aa3dfe7d4f21faca1a5924377a84c5141fd41bd7e30f0f6a34701f5e59a90833b5325f4",
-      "lastLogin": "2026-10-05T16:23:04.028Z"
+      "lastLogin": "2026-10-06T15:24:06.134Z",
+      "status": "ACTIVE",
+      "email": "admin@ziproo.com"
     },
     {
       "id": "usr_admin_2",
@@ -16,7 +18,9 @@
       "role": "Co-founder of ZIPROO",
       "salt": "aadb5780dcd4f1e8b2b71ff1ab68568c",
       "hash": "58a63b2f30bfcd24973863a050d8c65b8ae29bb4ca148d0447c0bd83af18eba55a3866390b26ba1e5f550cd114b014fa0c7898ab56d96415c77e4f23ef8f57ed",
-      "lastLogin": "2026-10-02T09:48:34.247Z"
+      "lastLogin": "2026-10-02T09:48:34.247Z",
+      "status": "ACTIVE",
+      "email": "ranjith@ziproo.com"
     },
     {
       "id": "usr_admin_1790687831438",
@@ -25,7 +29,52 @@
       "role": "Operations & Atelier Lead",
       "salt": "d3914aa7434dbdb03391ffe0cd690412",
       "hash": "422b7f7b3e4d6786b42b2cd76f47dfc996fc736706492e886c9c4a19ef79f1efdf547db0b8fd2faa9595972f508b760b88b4452a0c1e42df2e36508d54376eaa",
-      "lastLogin": "2026-09-29T13:17:11.438Z"
+      "lastLogin": "2026-09-29T13:17:11.438Z",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "usr_admin_1791300080589",
+      "username": "admin_test_1791300080215",
+      "email": "admin_test_1791300080215@ziproo.com",
+      "name": "Operations Manager",
+      "role": "admin",
+      "status": "ACTIVE",
+      "salt": "5c681f0cb324aa211a4809e52a8c7431",
+      "hash": "3d9e1840c0b0ec4924c4cf468d82b5112a4bf327a0400a512acc3cb4aeb7a4d3734df2b6f9623d3f4202133d0ab14d6c60377c63a8e07d3694d1de63b5afb69f",
+      "createdAt": "2026-10-06T15:21:20.589Z"
+    },
+    {
+      "id": "usr_admin_1791300153093",
+      "username": "admin_test_1791300152726",
+      "email": "admin_test_1791300152726@ziproo.com",
+      "name": "Operations Manager",
+      "role": "admin",
+      "status": "ACTIVE",
+      "salt": "c367d8a9c5dd00ffe2e558547ae4b1d5",
+      "hash": "13d7435712c42dc6b9d06d154bd9484d46be3cf1c6d74ade153f91aac9657de3054aca99ac560574114350cb397aaf3916ded118d97a7454869a4a0e80aff9fb",
+      "createdAt": "2026-10-06T15:22:33.093Z"
+    },
+    {
+      "id": "usr_admin_1791300191853",
+      "username": "admin_test_1791300191480",
+      "email": "admin_test_1791300191480@ziproo.com",
+      "name": "Operations Manager",
+      "role": "admin",
+      "status": "ACTIVE",
+      "salt": "99aded1f9ab2e8a46e553a9fec555391",
+      "hash": "f9d3fdb29150de4bf39c446606a6d2425c6c35e8b26b96386063b6cdebdaf7dc39d57db625ac79f3570d001901e16b6205573b5cadb0bca29d143ed0be845f8e",
+      "createdAt": "2026-10-06T15:23:11.853Z"
+    },
+    {
+      "id": "usr_admin_1791300246802",
+      "username": "admin_test_1791300246433",
+      "email": "admin_test_1791300246433@ziproo.com",
+      "name": "Operations Manager",
+      "role": "admin",
+      "status": "ACTIVE",
+      "salt": "16a31ba714c3d0f2eba2305363971edd",
+      "hash": "4a72c93dbeaf3cc56a1393c7230495be8e6acb330d1ac81799ba281a36b7b81bfe66d0c20d388eb92fc9fefaedbf3ed2bc93bd2e0e636cf2663d62a590f1c9ca",
+      "createdAt": "2026-10-06T15:24:06.802Z"
     }
   ],
   "settings": {
@@ -48,18 +97,175 @@
     "freeShippingThreshold": 1999,
     "onlineReceivingPortal": {
       "enabled": true,
-      "upiId": "ziproo@upi",
+      "upiId": "ziproo@hdfcbank",
       "merchantName": "ZIPROO APPAREL ATELIER",
       "instructions": "Pay directly via UPI (GPay / PhonePe / Paytm / BHIM) to UPI ID: ziproo@upi or scan the official atelier QR code. Submit your 12-digit UTR / Transaction Reference ID during checkout.",
-      "bankAccountDetails": "Account Name: ZIPROO CLOTHING | Bank: HDFC Bank | A/C No: 50200089202611 | IFSC: HDFC0001234"
+      "bankAccountDetails": "Account Name: ZIPROO LUXURY APPAREL LLP | Bank: HDFC Bank Ltd. | A/C No: 50200088991122 | IFSC: HDFC0001234",
+      "qrCodeUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800"
     },
     "domain": "ziproofashion.com",
-    "introVideoUrl": "/intro_video.mp4",
-    "introVideoTitle": "ZIPROO ATELIER · 2026 BRAND INTRO FILM",
+    "introVideoUrl": "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-neon-light-41551-large.mp4",
+    "introVideoTitle": "ZIPROO SS26 Campaign Film",
     "introVideoDescription": "Raw street architecture, heavyweight craftsmanship, and raw urban energy. Official brand intro film with stereo soundtrack.",
     "introVideoEnabled": true
   },
   "products": [
+    {
+      "id": "prod_seller_1791300249092_8vvf",
+      "name": "Cyberpunk Heavyweight Hoodie",
+      "category": "T-Shirts & Tops",
+      "price": 2499,
+      "originalPrice": 3999,
+      "salePrice": 2499,
+      "description": "Ultra-dense French Terry cotton with reflective puff print.",
+      "fabricDetails": "",
+      "material": "",
+      "image": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "primaryImage": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "images": [
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000"
+      ],
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black",
+        "Graphite"
+      ],
+      "color": "Black",
+      "features": [],
+      "careInstructions": "Cold wash inside out. Dry flat. Do not bleach.",
+      "tags": [
+        "Streetwear",
+        "T-Shirts & Tops"
+      ],
+      "inStock": true,
+      "stockCount": 50,
+      "piecesAvailable": 50,
+      "inventoryQuantity": 50,
+      "isNewLaunch": false,
+      "rating": 5,
+      "reviewsCount": 0,
+      "reviews": [],
+      "sellerId": "seller_1791300247763",
+      "sellerName": "Aesthetic Studios",
+      "approvalStatus": "PENDING_APPROVAL",
+      "gstApplicable": true,
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 2231.25,
+      "gstAmount": 267.75,
+      "createdAt": "2026-10-06T15:24:09.093Z",
+      "productLink": "/?product=prod_seller_1791300249092_8vvf",
+      "shippingCharge": 0
+    },
+    {
+      "id": "prod_seller_1791300194084_wenn",
+      "name": "Cyberpunk Heavyweight Hoodie",
+      "category": "T-Shirts & Tops",
+      "price": 2499,
+      "originalPrice": 3999,
+      "salePrice": 2499,
+      "description": "Ultra-dense French Terry cotton with reflective puff print.",
+      "fabricDetails": "",
+      "material": "",
+      "image": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "primaryImage": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "images": [
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000"
+      ],
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black",
+        "Graphite"
+      ],
+      "color": "Black",
+      "features": [],
+      "careInstructions": "Cold wash inside out. Dry flat. Do not bleach.",
+      "tags": [
+        "Streetwear",
+        "T-Shirts & Tops"
+      ],
+      "inStock": true,
+      "stockCount": 50,
+      "piecesAvailable": 50,
+      "inventoryQuantity": 50,
+      "isNewLaunch": false,
+      "rating": 5,
+      "reviewsCount": 0,
+      "reviews": [],
+      "sellerId": "seller_1791300192833",
+      "sellerName": "Aesthetic Studios",
+      "approvalStatus": "PENDING_APPROVAL",
+      "gstApplicable": true,
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 2231.25,
+      "gstAmount": 267.75,
+      "createdAt": "2026-10-06T15:23:14.085Z",
+      "productLink": "/?product=prod_seller_1791300194084_wenn",
+      "shippingCharge": 0
+    },
+    {
+      "id": "prod_seller_1791300155310_f2h6",
+      "name": "Cyberpunk Heavyweight Hoodie",
+      "category": "T-Shirts & Tops",
+      "price": 2499,
+      "originalPrice": 3999,
+      "salePrice": 2499,
+      "description": "Ultra-dense French Terry cotton with reflective puff print.",
+      "fabricDetails": "",
+      "material": "",
+      "image": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "primaryImage": "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000",
+      "images": [
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=1000"
+      ],
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black",
+        "Graphite"
+      ],
+      "color": "Black",
+      "features": [],
+      "careInstructions": "Cold wash inside out. Dry flat. Do not bleach.",
+      "tags": [
+        "Streetwear",
+        "T-Shirts & Tops"
+      ],
+      "inStock": true,
+      "stockCount": 50,
+      "piecesAvailable": 50,
+      "inventoryQuantity": 50,
+      "isNewLaunch": false,
+      "rating": 5,
+      "reviewsCount": 0,
+      "reviews": [],
+      "sellerId": "seller_1791300154061",
+      "sellerName": "Aesthetic Studios",
+      "approvalStatus": "PENDING_APPROVAL",
+      "gstApplicable": true,
+      "gstRate": 12,
+      "hsnCode": "6109",
+      "taxInclusive": true,
+      "basePrice": 2231.25,
+      "gstAmount": 267.75,
+      "createdAt": "2026-10-06T15:22:35.310Z",
+      "productLink": "/?product=prod_seller_1791300155310_f2h6",
+      "shippingCharge": 0
+    },
     {
       "id": "prod_seller_1791217381996_pfe3",
       "name": "KALLISTO TACTICAL CARGO PANTS",
@@ -322,7 +528,7 @@
         "XL",
         "XXL"
       ],
-      "stockCount": 31,
+      "stockCount": 25,
       "rating": 5,
       "reviewsCount": 3,
       "reviews": [
@@ -356,7 +562,7 @@
       ],
       "createdAt": "2026-09-20T10:00:00.000Z",
       "shippingCharge": 0,
-      "piecesAvailable": 31,
+      "piecesAvailable": 25,
       "productLink": "/?product=prod_1",
       "gstRate": 12,
       "hsnCode": "6109",
@@ -364,7 +570,7 @@
       "basePrice": 1338.39,
       "gstAmount": 160.61,
       "gstApplicable": true,
-      "updatedAt": "2026-10-05T16:23:22.980Z",
+      "updatedAt": "2026-10-06T15:23:33.511Z",
       "sellerId": "ziproo_official",
       "sellerName": "ZIPROO Official Atelier",
       "approvalStatus": "APPROVED"
@@ -411,7 +617,7 @@
         "L",
         "XL"
       ],
-      "stockCount": 23,
+      "stockCount": 21,
       "rating": 5,
       "reviewsCount": 21,
       "reviews": [
@@ -427,7 +633,7 @@
       ],
       "createdAt": "2026-09-22T14:30:00.000Z",
       "shippingCharge": 0,
-      "piecesAvailable": 23,
+      "piecesAvailable": 21,
       "productLink": "/?product=prod_2",
       "gstRate": 12,
       "hsnCode": "6110",
@@ -820,6 +1026,606 @@
     }
   ],
   "orders": [
+    {
+      "id": "ord_1791300252375",
+      "orderNumber": "ZIP-2026-5551",
+      "customerId": "cust_1791300084764_kcjw9",
+      "customerName": "Arjun Verma",
+      "mobileNumber": "+91 9988776655",
+      "email": "arjun.verma@example.com",
+      "completeAddress": "742 Cyber City, DLF Phase 2",
+      "city": "Gurugram",
+      "state": "Haryana",
+      "pinCode": "122002",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Washed Charcoal",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Received",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:24:12.375Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "arjun.verma@example.com",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "+91 9988776655",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:24:12.375Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          },
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:24:14.606Z",
+            "notificationSent": true,
+            "note": "Payment status changed from Cash Pending to Cash Received. Order status: Confirmed"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300253189_v53o",
+            "event": "order_confirmed",
+            "recipient": "arjun.verma@example.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-5551 - Create Your Identity",
+            "timestamp": "2026-10-06T15:24:12.377Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:24:12.377Z",
+        "adminEmailTimestamp": "2026-10-06T15:24:14.307Z"
+      }
+    },
+    {
+      "id": "ord_1791300209506",
+      "orderNumber": "ZIP-2026-3266",
+      "customerId": "cust_1791054545401",
+      "customerName": "Bhavna Sharma",
+      "mobileNumber": "9811223344",
+      "email": "customer_b_1791300208919@ziproo.test",
+      "completeAddress": "15 Marine Drive",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pinCode": "400020",
+      "items": [
+        {
+          "productId": "prod_2",
+          "productName": "SHADOW MONOLITH HEAVY HOODIE",
+          "category": "hoodies",
+          "size": "M",
+          "color": "Deep Onyx Black",
+          "quantity": 1,
+          "price": 3499,
+          "image": "/src/assets/images/ziproo_product_hoodie_1790610642709.jpg",
+          "gstRate": 12,
+          "hsnCode": "6110",
+          "basePrice": 3124.11,
+          "taxAmount": 374.89,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 3499,
+      "shipping": 0,
+      "totalAmount": 3499,
+      "taxSummary": {
+        "totalTax": 374.89,
+        "taxableAmount": 3124.11,
+        "cgst": 187.45,
+        "sgst": 187.44
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Pending",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:23:29.506Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "customer_b_1791300208919@ziproo.test",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "9811223344",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:23:29.506Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300209736_l9ly",
+            "event": "order_confirmed",
+            "recipient": "customer_b_1791300208919@ziproo.test",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-3266 - Create Your Identity",
+            "timestamp": "2026-10-06T15:23:29.508Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:23:29.508Z",
+        "adminEmailTimestamp": "2026-10-06T15:23:30.230Z"
+      }
+    },
+    {
+      "id": "ord_1791300207515",
+      "orderNumber": "ZIP-2026-9490",
+      "customerId": "cust_1791054543080",
+      "customerName": "Aarav Patel",
+      "mobileNumber": "9876543210",
+      "email": "customer_a_1791300206898@ziproo.test",
+      "completeAddress": "42 MG Road",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560001",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Deep Onyx Black",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Pending",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:23:27.515Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "customer_a_1791300206898@ziproo.test",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "9876543210",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:23:27.515Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300208089_w1ht",
+            "event": "order_confirmed",
+            "recipient": "customer_a_1791300206898@ziproo.test",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-9490 - Create Your Identity",
+            "timestamp": "2026-10-06T15:23:27.517Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:23:27.517Z",
+        "adminEmailTimestamp": "2026-10-06T15:23:28.915Z"
+      }
+    },
+    {
+      "id": "ord_1791300197389",
+      "orderNumber": "ZIP-2026-9619",
+      "customerId": "cust_1791300084764_kcjw9",
+      "customerName": "Arjun Verma",
+      "mobileNumber": "+91 9988776655",
+      "email": "arjun.verma@example.com",
+      "completeAddress": "742 Cyber City, DLF Phase 2",
+      "city": "Gurugram",
+      "state": "Haryana",
+      "pinCode": "122002",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Washed Charcoal",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Received",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:23:17.389Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "arjun.verma@example.com",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "+91 9988776655",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:23:17.389Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          },
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:23:19.465Z",
+            "notificationSent": true,
+            "note": "Payment status changed from Cash Pending to Cash Received. Order status: Confirmed"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300198241_i67g",
+            "event": "order_confirmed",
+            "recipient": "arjun.verma@example.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-9619 - Create Your Identity",
+            "timestamp": "2026-10-06T15:23:17.401Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:23:17.401Z",
+        "adminEmailTimestamp": "2026-10-06T15:23:19.167Z"
+      }
+    },
+    {
+      "id": "ord_1791300158572",
+      "orderNumber": "ZIP-2026-7634",
+      "customerId": "cust_1791300084764_kcjw9",
+      "customerName": "Arjun Verma",
+      "mobileNumber": "+91 9988776655",
+      "email": "arjun.verma@example.com",
+      "completeAddress": "742 Cyber City, DLF Phase 2",
+      "city": "Gurugram",
+      "state": "Haryana",
+      "pinCode": "122002",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Washed Charcoal",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Received",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:22:38.572Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "arjun.verma@example.com",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "+91 9988776655",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:22:38.572Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          },
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:22:40.292Z",
+            "notificationSent": true,
+            "note": "Payment status changed from Cash Pending to Cash Received. Order status: Confirmed"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300159184_mapa",
+            "event": "order_confirmed",
+            "recipient": "arjun.verma@example.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-7634 - Create Your Identity",
+            "timestamp": "2026-10-06T15:22:38.585Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:22:38.585Z",
+        "adminEmailTimestamp": "2026-10-06T15:22:39.997Z"
+      }
+    },
+    {
+      "id": "ord_1791300084764",
+      "orderNumber": "ZIP-2026-9105",
+      "customerId": "cust_1791300084764_kcjw9",
+      "customerName": "Arjun Verma",
+      "mobileNumber": "+91 9988776655",
+      "email": "arjun.verma@example.com",
+      "completeAddress": "742 Cyber City, DLF Phase 2",
+      "city": "Gurugram",
+      "state": "Haryana",
+      "pinCode": "122002",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Washed Charcoal",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Cash Received",
+      "orderStatus": "Confirmed",
+      "createdAt": "2026-10-06T15:21:24.764Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "arjun.verma@example.com",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "+91 9988776655",
+        "statusHistory": [
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:21:24.764Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          },
+          {
+            "status": "Confirmed",
+            "timestamp": "2026-10-06T15:21:26.477Z",
+            "notificationSent": true,
+            "note": "Payment status changed from Cash Pending to Cash Received. Order status: Confirmed"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791300085335_dgtp",
+            "event": "order_confirmed",
+            "recipient": "arjun.verma@example.com",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-9105 - Create Your Identity",
+            "timestamp": "2026-10-06T15:21:24.777Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:21:24.777Z",
+        "adminEmailTimestamp": "2026-10-06T15:21:26.182Z"
+      }
+    },
+    {
+      "id": "ord_1791299425428",
+      "orderNumber": "ZIP-2026-3583",
+      "customerId": "cust_1791054545401",
+      "customerName": "Bhavna Sharma",
+      "mobileNumber": "9811223344",
+      "email": "customer_b_1791299424818@ziproo.test",
+      "completeAddress": "15 Marine Drive",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pinCode": "400020",
+      "items": [
+        {
+          "productId": "prod_2",
+          "productName": "SHADOW MONOLITH HEAVY HOODIE",
+          "category": "hoodies",
+          "size": "M",
+          "color": "Deep Onyx Black",
+          "quantity": 1,
+          "price": 3499,
+          "image": "/src/assets/images/ziproo_product_hoodie_1790610642709.jpg",
+          "gstRate": 12,
+          "hsnCode": "6110",
+          "basePrice": 3124.11,
+          "taxAmount": 374.89,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 3499,
+      "shipping": 0,
+      "totalAmount": 3499,
+      "taxSummary": {
+        "totalTax": 374.89,
+        "taxableAmount": 3124.11,
+        "cgst": 187.45,
+        "sgst": 187.44
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Order Confirmed",
+      "createdAt": "2026-10-06T15:10:25.428Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "customer_b_1791299424818@ziproo.test",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "9811223344",
+        "statusHistory": [
+          {
+            "status": "Order Confirmed",
+            "timestamp": "2026-10-06T15:10:25.428Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791299425754_jrmo",
+            "event": "order_confirmed",
+            "recipient": "customer_b_1791299424818@ziproo.test",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-3583 - Create Your Identity",
+            "timestamp": "2026-10-06T15:10:25.430Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:10:25.430Z",
+        "adminEmailTimestamp": "2026-10-06T15:10:26.305Z"
+      }
+    },
+    {
+      "id": "ord_1791299422967",
+      "orderNumber": "ZIP-2026-8138",
+      "customerId": "cust_1791054543080",
+      "customerName": "Aarav Patel",
+      "mobileNumber": "9876543210",
+      "email": "customer_a_1791299422293@ziproo.test",
+      "completeAddress": "42 MG Road",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pinCode": "560001",
+      "items": [
+        {
+          "productId": "prod_1",
+          "productName": "VORTEX 01 OVERSIZED TEE",
+          "category": "oversized-t-shirts",
+          "size": "L",
+          "color": "Deep Onyx Black",
+          "quantity": 1,
+          "price": 1499,
+          "image": "/src/assets/images/ziproo_product_tee_1790610656044.jpg",
+          "gstRate": 12,
+          "hsnCode": "6109",
+          "basePrice": 1338.39,
+          "taxAmount": 160.61,
+          "sellerId": "ziproo_official",
+          "sellerName": "ZIPROO Official Atelier",
+          "fulfillmentStatus": "PENDING"
+        }
+      ],
+      "subtotal": 1499,
+      "shipping": 99,
+      "totalAmount": 1598,
+      "taxSummary": {
+        "totalTax": 160.61,
+        "taxableAmount": 1338.39,
+        "cgst": 80.31,
+        "sgst": 80.3
+      },
+      "paymentMethod": "cod",
+      "paymentStatus": "Pending",
+      "orderStatus": "Order Confirmed",
+      "createdAt": "2026-10-06T15:10:22.967Z",
+      "notificationLog": {
+        "adminEmailSent": true,
+        "adminEmailRecipient": "ziprooclothing@gmail.com",
+        "customerEmailSent": true,
+        "customerEmailRecipient": "customer_a_1791299422293@ziproo.test",
+        "customerSmsSent": false,
+        "customerSmsRecipient": "9876543210",
+        "statusHistory": [
+          {
+            "status": "Order Confirmed",
+            "timestamp": "2026-10-06T15:10:22.967Z",
+            "notificationSent": true,
+            "note": "Cash on Delivery order placed and confirmed in atelier system"
+          }
+        ],
+        "emailAuditLog": [
+          {
+            "id": "eml_1791299423887_o3up",
+            "event": "order_confirmed",
+            "recipient": "customer_a_1791299422293@ziproo.test",
+            "subject": "ZIPROO Order Confirmed: #ZIP-2026-8138 - Create Your Identity",
+            "timestamp": "2026-10-06T15:10:23.019Z",
+            "success": true
+          }
+        ],
+        "customerEmailTimestamp": "2026-10-06T15:10:23.019Z",
+        "adminEmailTimestamp": "2026-10-06T15:10:24.815Z"
+      }
+    },
     {
       "id": "ord_1791217399277",
       "orderNumber": "ZIP-2026-6289",
@@ -1972,6 +2778,20 @@
   ],
   "customers": [
     {
+      "id": "cust_1791300084764_kcjw9",
+      "name": "Arjun Verma",
+      "email": "arjun.verma@example.com",
+      "phone": "+91 9988776655",
+      "address": "742 Cyber City, DLF Phase 2",
+      "city": "Gurugram",
+      "state": "Haryana",
+      "pinCode": "122002",
+      "location": "Gurugram, Haryana",
+      "registeredAt": "2026-10-06T15:21:24.764Z",
+      "lastLoginAt": "2026-10-06T15:24:12.375Z",
+      "totalOrders": 4
+    },
+    {
       "id": "cust_1791217385659_3h82l",
       "name": "Rohit Khandelwal",
       "email": "customer_multi_1791217385375@ziproo.test",
@@ -1988,7 +2808,7 @@
     {
       "id": "cust_1791054545401",
       "name": "Bhavna Sharma",
-      "email": "customer_b_1791217398727@ziproo.test",
+      "email": "customer_b_1791300208919@ziproo.test",
       "phone": "9811223344",
       "address": "15 Marine Drive",
       "city": "Mumbai",
@@ -1996,13 +2816,13 @@
       "pinCode": "400020",
       "location": "Mumbai, Maharashtra",
       "registeredAt": "2026-10-03T19:09:05.401Z",
-      "lastLoginAt": "2026-10-05T16:23:18.993Z",
+      "lastLoginAt": "2026-10-06T15:23:29.212Z",
       "totalOrders": 0
     },
     {
       "id": "cust_1791054543080",
       "name": "Aarav Patel",
-      "email": "customer_a_1791217396844@ziproo.test",
+      "email": "customer_a_1791300206898@ziproo.test",
       "phone": "9876543210",
       "address": "42 MG Road",
       "city": "Bengaluru",
@@ -2010,7 +2830,7 @@
       "pinCode": "560001",
       "location": "Bengaluru, Karnataka",
       "registeredAt": "2026-10-03T19:09:03.080Z",
-      "lastLoginAt": "2026-10-05T16:23:17.133Z",
+      "lastLoginAt": "2026-10-06T15:23:27.213Z",
       "totalOrders": 0
     },
     {
@@ -2120,6 +2940,63 @@
     }
   ],
   "sellers": [
+    {
+      "id": "seller_1791300247763",
+      "name": "Aesthetic Studios",
+      "businessName": "Aesthetic Studios",
+      "email": "seller_brand_1791300247396@ziproo.com",
+      "phone": "+91 9876543210",
+      "status": "ACTIVE",
+      "commissionPercentage": 15,
+      "address": "",
+      "city": "",
+      "state": "",
+      "pinCode": "",
+      "description": "",
+      "emailNotificationsEnabled": true,
+      "salt": "c96e309835a9497def09d2e239fa3710",
+      "hash": "88cee6a3861c6605e6c10003f7a628c8744366ee28c0fb9f3f5dfa277a9b9b133480f8bf9cdc4da36f45dccd46d18f4956846835a644416997ca1d07ba55c9b5",
+      "createdAt": "2026-10-06T15:24:07.763Z",
+      "approvedAt": "2026-10-06T15:24:07.763Z"
+    },
+    {
+      "id": "seller_1791300192833",
+      "name": "Aesthetic Studios",
+      "businessName": "Aesthetic Studios",
+      "email": "seller_brand_1791300192454@ziproo.com",
+      "phone": "+91 9876543210",
+      "status": "ACTIVE",
+      "commissionPercentage": 15,
+      "address": "",
+      "city": "",
+      "state": "",
+      "pinCode": "",
+      "description": "",
+      "emailNotificationsEnabled": true,
+      "salt": "64ba9913a9a77e8994f1fcffbbced088",
+      "hash": "7844f1f446f3006193f1215732a3724f869c98b8ef0571921c6f1b73095cb37ec800ec0b89d779f8bca6350fe2d519e183c6b4999370f7e9dd6d47738d3d0257",
+      "createdAt": "2026-10-06T15:23:12.833Z",
+      "approvedAt": "2026-10-06T15:23:12.834Z"
+    },
+    {
+      "id": "seller_1791300154061",
+      "name": "Aesthetic Studios",
+      "businessName": "Aesthetic Studios",
+      "email": "seller_brand_1791300153693@ziproo.com",
+      "phone": "+91 9876543210",
+      "status": "ACTIVE",
+      "commissionPercentage": 15,
+      "address": "",
+      "city": "",
+      "state": "",
+      "pinCode": "",
+      "description": "",
+      "emailNotificationsEnabled": true,
+      "salt": "f54745cc819d5d7ffd4bd14208251b6c",
+      "hash": "1e4d309637a3230d4bc2c47d8c79373d99074c9dd9510656b5c06863d75aff20fb23e93547708ebb2eebf24d960f67c78d5d30d7d97ef1fe8e6f80934ff9e719",
+      "createdAt": "2026-10-06T15:22:34.062Z",
+      "approvedAt": "2026-10-06T15:22:34.062Z"
+    },
     {
       "id": "seller_kronos",
       "name": "Karan Malhotra",
@@ -2252,6 +3129,461 @@
       "salt": "7910fb43918e7677395e05c66621d81d",
       "hash": "a380ff4b656d63813d4e6b9c98adc22ceb8b5e41436104cdcfcd20c080f46f424b93585f9ae1c4083a9373dc4927c9d9a85f2d1b007674b90136d56ab248fbba",
       "createdAt": "2026-10-05T16:23:00.601Z"
+    }
+  ],
+  "qrCodes": [
+    {
+      "id": "qr_1791300249399",
+      "label": "Primary ZIPROO HDFC UPI QR",
+      "upiId": "ziproo@hdfcbank",
+      "imageUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800",
+      "isActive": true,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:24:09.399Z"
+    },
+    {
+      "id": "qr_1791300194398",
+      "label": "Primary ZIPROO HDFC UPI QR",
+      "upiId": "ziproo@hdfcbank",
+      "imageUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:23:14.398Z"
+    },
+    {
+      "id": "qr_1791300155616",
+      "label": "Primary ZIPROO HDFC UPI QR",
+      "upiId": "ziproo@hdfcbank",
+      "imageUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:22:35.616Z"
+    },
+    {
+      "id": "qr_1791300081819",
+      "label": "Primary ZIPROO HDFC UPI QR",
+      "upiId": "ziproo@hdfcbank",
+      "imageUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:21.819Z"
+    },
+    {
+      "id": "qr_default_1",
+      "label": "Primary ZIPROO HDFC UPI QR",
+      "upiId": "ziproo@hdfcbank",
+      "imageUrl": "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:19.832Z"
+    }
+  ],
+  "bankDetails": {
+    "bankName": "HDFC Bank Ltd.",
+    "accountHolderName": "ZIPROO LUXURY APPAREL LLP",
+    "accountNumber": "50200088991122",
+    "ifscCode": "HDFC0001234",
+    "upiId": "ziproo@hdfcbank",
+    "gpayUpiId": "ziproo.pay@oksbi",
+    "phonepeUpiId": "ziproo@ybl",
+    "paytmUpiId": "ziproo@paytm",
+    "otherDetails": "Indiranagar Branch, Bengaluru. RTGS / NEFT / IMPS enabled.",
+    "updatedAt": "2026-10-06T15:24:10.311Z",
+    "updatedBy": "usr_admin_1"
+  },
+  "introVideos": [
+    {
+      "id": "vid_1791300250900",
+      "title": "ZIPROO SS26 Campaign Film",
+      "videoUrl": "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-neon-light-41551-large.mp4",
+      "isActive": true,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:24:10.900Z"
+    },
+    {
+      "id": "vid_1791300195890",
+      "title": "ZIPROO SS26 Campaign Film",
+      "videoUrl": "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-neon-light-41551-large.mp4",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:23:15.890Z"
+    },
+    {
+      "id": "vid_1791300157092",
+      "title": "ZIPROO SS26 Campaign Film",
+      "videoUrl": "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-neon-light-41551-large.mp4",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:22:37.092Z"
+    },
+    {
+      "id": "vid_1791300083298",
+      "title": "ZIPROO SS26 Campaign Film",
+      "videoUrl": "https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-neon-light-41551-large.mp4",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:23.298Z"
+    },
+    {
+      "id": "vid_default_1",
+      "title": "ZIPROO 2026 BRAND INTRO FILM",
+      "videoUrl": "/intro_video.mp4",
+      "description": "Raw street architecture, heavyweight craftsmanship, and raw urban energy.",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:19.832Z"
+    }
+  ],
+  "homepageBackgrounds": [
+    {
+      "id": "bg_1791300251489",
+      "title": "Dark Minimalist Architectural Texture",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000",
+      "isActive": true,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:24:11.489Z"
+    },
+    {
+      "id": "bg_1791300196496",
+      "title": "Dark Minimalist Architectural Texture",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:23:16.496Z"
+    },
+    {
+      "id": "bg_1791300157687",
+      "title": "Dark Minimalist Architectural Texture",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:22:37.687Z"
+    },
+    {
+      "id": "bg_1791300083883",
+      "title": "Dark Minimalist Architectural Texture",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:23.883Z"
+    },
+    {
+      "id": "bg_default_1",
+      "title": "Dark Minimalist Urban Architecture",
+      "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000",
+      "isActive": false,
+      "uploadedBy": "usr_admin_1",
+      "createdAt": "2026-10-06T15:21:19.832Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit_1791300254903_fbzy",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Payment Status Changed",
+      "details": "Order #ZIP-2026-5551: Payment changed from \"Cash Pending\" to \"Cash Received\". Order: \"Confirmed\"",
+      "relatedId": "ord_1791300252375",
+      "timestamp": "2026-10-06T15:24:14.903Z"
+    },
+    {
+      "id": "audit_1791300251784_knfe",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Homepage Background Added",
+      "details": "Added new background image \"Dark Minimalist Architectural Texture\"",
+      "relatedId": "bg_1791300251489",
+      "timestamp": "2026-10-06T15:24:11.784Z"
+    },
+    {
+      "id": "audit_1791300251195_yzxb",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Intro Video Added",
+      "details": "Uploaded new intro video \"ZIPROO SS26 Campaign Film\"",
+      "relatedId": "vid_1791300250900",
+      "timestamp": "2026-10-06T15:24:11.195Z"
+    },
+    {
+      "id": "audit_1791300250606_dam9",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Bank Details Updated",
+      "details": "Updated banking receiving details for HDFC Bank Ltd. (ZIPROO LUXURY APPAREL LLP)",
+      "timestamp": "2026-10-06T15:24:10.606Z"
+    },
+    {
+      "id": "audit_1791300249697_ip85",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "QR Code Added",
+      "details": "Added new QR code \"Primary ZIPROO HDFC UPI QR\" (Active: true)",
+      "relatedId": "qr_1791300249399",
+      "timestamp": "2026-10-06T15:24:09.697Z"
+    },
+    {
+      "id": "audit_1791300248435_rbtp",
+      "userId": "seller_1791300247763",
+      "userName": "Aesthetic Studios",
+      "userRole": "seller",
+      "action": "Portal Sign-In",
+      "details": "Seller logged in successfully",
+      "timestamp": "2026-10-06T15:24:08.435Z"
+    },
+    {
+      "id": "audit_1791300247098_7xmh",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Admin Created",
+      "details": "Created admin \"Operations Manager\" (admin_test_1791300246433) with status ACTIVE",
+      "relatedId": "usr_admin_1791300246802",
+      "timestamp": "2026-10-06T15:24:07.098Z"
+    },
+    {
+      "id": "audit_1791300246427_rbd8",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Portal Sign-In",
+      "details": "Successful sign-in as SUPER_ADMIN",
+      "timestamp": "2026-10-06T15:24:06.427Z"
+    },
+    {
+      "id": "audit_1791300199757_f995",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Payment Status Changed",
+      "details": "Order #ZIP-2026-9619: Payment changed from \"Cash Pending\" to \"Cash Received\". Order: \"Confirmed\"",
+      "relatedId": "ord_1791300197389",
+      "timestamp": "2026-10-06T15:23:19.757Z"
+    },
+    {
+      "id": "audit_1791300196791_lghj",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Homepage Background Added",
+      "details": "Added new background image \"Dark Minimalist Architectural Texture\"",
+      "relatedId": "bg_1791300196496",
+      "timestamp": "2026-10-06T15:23:16.791Z"
+    },
+    {
+      "id": "audit_1791300196194_rvz1",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Intro Video Added",
+      "details": "Uploaded new intro video \"ZIPROO SS26 Campaign Film\"",
+      "relatedId": "vid_1791300195890",
+      "timestamp": "2026-10-06T15:23:16.194Z"
+    },
+    {
+      "id": "audit_1791300195587_6k91",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Bank Details Updated",
+      "details": "Updated banking receiving details for HDFC Bank Ltd. (ZIPROO LUXURY APPAREL LLP)",
+      "timestamp": "2026-10-06T15:23:15.587Z"
+    },
+    {
+      "id": "audit_1791300194694_7s1i",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "QR Code Added",
+      "details": "Added new QR code \"Primary ZIPROO HDFC UPI QR\" (Active: true)",
+      "relatedId": "qr_1791300194398",
+      "timestamp": "2026-10-06T15:23:14.694Z"
+    },
+    {
+      "id": "audit_1791300193493_8x88",
+      "userId": "seller_1791300192833",
+      "userName": "Aesthetic Studios",
+      "userRole": "seller",
+      "action": "Portal Sign-In",
+      "details": "Seller logged in successfully",
+      "timestamp": "2026-10-06T15:23:13.493Z"
+    },
+    {
+      "id": "audit_1791300192155_ncc5",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Admin Created",
+      "details": "Created admin \"Operations Manager\" (admin_test_1791300191480) with status ACTIVE",
+      "relatedId": "usr_admin_1791300191853",
+      "timestamp": "2026-10-06T15:23:12.155Z"
+    },
+    {
+      "id": "audit_1791300191471_s0yk",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Portal Sign-In",
+      "details": "Successful sign-in as SUPER_ADMIN",
+      "timestamp": "2026-10-06T15:23:11.471Z"
+    },
+    {
+      "id": "audit_1791300160585_m95v",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Payment Status Changed",
+      "details": "Order #ZIP-2026-7634: Payment changed from \"Cash Pending\" to \"Cash Received\". Order: \"Confirmed\"",
+      "relatedId": "ord_1791300158572",
+      "timestamp": "2026-10-06T15:22:40.585Z"
+    },
+    {
+      "id": "audit_1791300157979_kwmj",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Homepage Background Added",
+      "details": "Added new background image \"Dark Minimalist Architectural Texture\"",
+      "relatedId": "bg_1791300157687",
+      "timestamp": "2026-10-06T15:22:37.979Z"
+    },
+    {
+      "id": "audit_1791300157391_mhd2",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Intro Video Added",
+      "details": "Uploaded new intro video \"ZIPROO SS26 Campaign Film\"",
+      "relatedId": "vid_1791300157092",
+      "timestamp": "2026-10-06T15:22:37.391Z"
+    },
+    {
+      "id": "audit_1791300156792_7u5w",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Bank Details Updated",
+      "details": "Updated banking receiving details for HDFC Bank Ltd. (ZIPROO LUXURY APPAREL LLP)",
+      "timestamp": "2026-10-06T15:22:36.792Z"
+    },
+    {
+      "id": "audit_1791300155908_i83c",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "QR Code Added",
+      "details": "Added new QR code \"Primary ZIPROO HDFC UPI QR\" (Active: true)",
+      "relatedId": "qr_1791300155616",
+      "timestamp": "2026-10-06T15:22:35.908Z"
+    },
+    {
+      "id": "audit_1791300154721_ege6",
+      "userId": "seller_1791300154061",
+      "userName": "Aesthetic Studios",
+      "userRole": "seller",
+      "action": "Portal Sign-In",
+      "details": "Seller logged in successfully",
+      "timestamp": "2026-10-06T15:22:34.721Z"
+    },
+    {
+      "id": "audit_1791300153386_jprt",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Admin Created",
+      "details": "Created admin \"Operations Manager\" (admin_test_1791300152726) with status ACTIVE",
+      "relatedId": "usr_admin_1791300153093",
+      "timestamp": "2026-10-06T15:22:33.386Z"
+    },
+    {
+      "id": "audit_1791300152717_n1h9",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Portal Sign-In",
+      "details": "Successful sign-in as SUPER_ADMIN",
+      "timestamp": "2026-10-06T15:22:32.717Z"
+    },
+    {
+      "id": "audit_1791300086768_wz2v",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Payment Status Changed",
+      "details": "Order #ZIP-2026-9105: Payment changed from \"Cash Pending\" to \"Cash Received\". Order: \"Confirmed\"",
+      "relatedId": "ord_1791300084764",
+      "timestamp": "2026-10-06T15:21:26.768Z"
+    },
+    {
+      "id": "audit_1791300084175_8jxd",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Homepage Background Added",
+      "details": "Added new background image \"Dark Minimalist Architectural Texture\"",
+      "relatedId": "bg_1791300083883",
+      "timestamp": "2026-10-06T15:21:24.175Z"
+    },
+    {
+      "id": "audit_1791300083588_z31x",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Intro Video Added",
+      "details": "Uploaded new intro video \"ZIPROO SS26 Campaign Film\"",
+      "relatedId": "vid_1791300083298",
+      "timestamp": "2026-10-06T15:21:23.588Z"
+    },
+    {
+      "id": "audit_1791300083004_dnrv",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Bank Details Updated",
+      "details": "Updated banking receiving details for HDFC Bank Ltd. (ZIPROO LUXURY APPAREL LLP)",
+      "timestamp": "2026-10-06T15:21:23.004Z"
+    },
+    {
+      "id": "audit_1791300082124_mgbb",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "QR Code Added",
+      "details": "Added new QR code \"Primary ZIPROO HDFC UPI QR\" (Active: true)",
+      "relatedId": "qr_1791300081819",
+      "timestamp": "2026-10-06T15:21:22.124Z"
+    },
+    {
+      "id": "audit_1791300080883_ml2v",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Admin Created",
+      "details": "Created admin \"Operations Manager\" (admin_test_1791300080215) with status ACTIVE",
+      "relatedId": "usr_admin_1791300080589",
+      "timestamp": "2026-10-06T15:21:20.883Z"
+    },
+    {
+      "id": "audit_1791300080206_psy4",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma (Founder & Creative Director)",
+      "userRole": "super_admin",
+      "action": "Portal Sign-In",
+      "details": "Successful sign-in as SUPER_ADMIN",
+      "timestamp": "2026-10-06T15:21:20.206Z"
+    },
+    {
+      "id": "audit_init_1791300079832",
+      "userId": "usr_admin_1",
+      "userName": "Rohith Sharma",
+      "userRole": "super_admin",
+      "action": "System Initialized",
+      "details": "Role-based access control and management modules activated.",
+      "timestamp": "2026-10-06T15:21:19.832Z"
     }
   ]
 }

@@ -271,8 +271,8 @@ export interface Order {
     igst?: number;
     gstRate?: number;
   };
-  paymentMethod: 'cod' | 'online_portal' | 'razorpay';
-  paymentStatus: 'Pending' | 'Paid' | 'Processing' | 'Failed';
+  paymentMethod: 'cod' | 'online_portal' | 'razorpay' | 'gpay' | 'phonepe' | 'paytm' | 'upi' | 'COD' | string;
+  paymentStatus: PaymentStatus;
   transactionReference?: string; // UTR or online transfer ref
   orderStatus: OrderStatus;
   createdAt: string;
@@ -286,10 +286,94 @@ export interface Order {
   };
 }
 
+export type UserRole = 'super_admin' | 'admin' | 'seller' | 'customer';
+
+export type PaymentStatus =
+  | 'Payment Pending'
+  | 'Payment Processing'
+  | 'Payment Successful'
+  | 'Payment Failed'
+  | 'Payment Cancelled'
+  | 'Cash Pending'
+  | 'Cash Received'
+  | 'Order Confirmed'
+  | 'Pending'
+  | 'Paid'
+  | 'Processing'
+  | 'Failed';
+
+export interface AuditLogEntry {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole | string;
+  action: string;
+  details?: string;
+  relatedId?: string;
+  timestamp: string;
+}
+
+export interface PaymentQrCode {
+  id: string;
+  label: string;
+  upiId?: string;
+  imageUrl: string;
+  isActive: boolean;
+  uploadedBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BankReceivingDetails {
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  upiId: string;
+  gpayUpiId?: string;
+  phonepeUpiId?: string;
+  paytmUpiId?: string;
+  otherDetails?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface IntroVideoItem {
+  id: string;
+  title: string;
+  videoUrl: string;
+  description?: string;
+  isActive: boolean;
+  uploadedBy?: string;
+  createdAt: string;
+}
+
+export interface HomepageBackgroundItem {
+  id: string;
+  title: string;
+  imageUrl: string;
+  isActive: boolean;
+  uploadedBy?: string;
+  createdAt: string;
+}
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+  email?: string;
+  name: string;
+  role: 'super_admin' | 'admin' | string;
+  status: 'ACTIVE' | 'INACTIVE';
+  lastLogin?: string;
+  createdAt?: string;
+}
+
 export interface AdminUser {
   id: string;
   username: string;
+  email?: string;
   name: string;
   role: string;
   lastLogin?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
 }

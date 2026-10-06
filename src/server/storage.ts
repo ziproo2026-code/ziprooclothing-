@@ -1,6 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import type { Product, CompanyUpdate, StoreSettings, Order, ProductReview, Customer, CustomerMessage, Seller } from '../types/index.js';
+import type {
+  Product,
+  CompanyUpdate,
+  StoreSettings,
+  Order,
+  ProductReview,
+  Customer,
+  CustomerMessage,
+  Seller,
+  AuditLogEntry,
+  PaymentQrCode,
+  BankReceivingDetails,
+  IntroVideoItem,
+  HomepageBackgroundItem,
+} from '../types/index.js';
 import { hashPassword, verifyPassword, type StoredAdmin } from './auth.js';
 
 export interface DatabaseSchema {
@@ -12,6 +26,11 @@ export interface DatabaseSchema {
   orders: Order[];
   customers: Customer[];
   messages: CustomerMessage[];
+  qrCodes?: PaymentQrCode[];
+  bankDetails?: BankReceivingDetails;
+  introVideos?: IntroVideoItem[];
+  homepageBackgrounds?: HomepageBackgroundItem[];
+  auditLogs?: AuditLogEntry[];
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -733,6 +752,109 @@ export function loadDatabase(): DatabaseSchema {
           modified = true;
         }
       });
+    }
+
+    // Ensure Admin 1 & 2 have email, status, and role
+    if (data.admins && Array.isArray(data.admins)) {
+      data.admins.forEach((adm) => {
+        if (!adm.status) {
+          adm.status = 'ACTIVE';
+          modified = true;
+        }
+        if (adm.username === 'rohithsharma' || adm.id === 'usr_admin_1') {
+          if (!adm.email) {
+            adm.email = 'admin@ziproo.com';
+            modified = true;
+          }
+        }
+        if (adm.username === 'ranjithkumar' || adm.id === 'usr_admin_2') {
+          if (!adm.email) {
+            adm.email = 'ranjith@ziproo.com';
+            modified = true;
+          }
+        }
+      });
+    }
+
+    // Initialize QR codes collection
+    if (!data.qrCodes || !Array.isArray(data.qrCodes) || data.qrCodes.length === 0) {
+      data.qrCodes = [
+        {
+          id: 'qr_default_1',
+          label: 'Primary ZIPROO HDFC UPI QR',
+          upiId: 'ziproo@hdfcbank',
+          imageUrl: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&q=80&w=800',
+          isActive: true,
+          uploadedBy: 'usr_admin_1',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      modified = true;
+    }
+
+    // Initialize Bank Details
+    if (!data.bankDetails) {
+      data.bankDetails = {
+        bankName: 'HDFC Bank Ltd.',
+        accountHolderName: 'ZIPROO LUXURY APPAREL LLP',
+        accountNumber: '50200088991122',
+        ifscCode: 'HDFC0001234',
+        upiId: 'ziproo@hdfcbank',
+        gpayUpiId: 'ziproo.pay@oksbi',
+        phonepeUpiId: 'ziproo@ybl',
+        paytmUpiId: 'ziproo@paytm',
+        otherDetails: 'Indiranagar Branch, Bengaluru. RTGS / NEFT / IMPS enabled.',
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'usr_admin_1',
+      };
+      modified = true;
+    }
+
+    // Initialize Intro Videos
+    if (!data.introVideos || !Array.isArray(data.introVideos) || data.introVideos.length === 0) {
+      data.introVideos = [
+        {
+          id: 'vid_default_1',
+          title: 'ZIPROO 2026 BRAND INTRO FILM',
+          videoUrl: '/intro_video.mp4',
+          description: "Raw street architecture, heavyweight craftsmanship, and raw urban energy.",
+          isActive: true,
+          uploadedBy: 'usr_admin_1',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      modified = true;
+    }
+
+    // Initialize Homepage Backgrounds
+    if (!data.homepageBackgrounds || !Array.isArray(data.homepageBackgrounds) || data.homepageBackgrounds.length === 0) {
+      data.homepageBackgrounds = [
+        {
+          id: 'bg_default_1',
+          title: 'Dark Minimalist Urban Architecture',
+          imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000',
+          isActive: true,
+          uploadedBy: 'usr_admin_1',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      modified = true;
+    }
+
+    // Initialize Audit Logs
+    if (!data.auditLogs || !Array.isArray(data.auditLogs)) {
+      data.auditLogs = [
+        {
+          id: `audit_init_${Date.now()}`,
+          userId: 'usr_admin_1',
+          userName: 'Rohith Sharma',
+          userRole: 'super_admin',
+          action: 'System Initialized',
+          details: 'Role-based access control and management modules activated.',
+          timestamp: new Date().toISOString(),
+        },
+      ];
+      modified = true;
     }
 
     if (modified) {

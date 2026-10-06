@@ -6,11 +6,14 @@ const JWT_SECRET = process.env.AUTH_SECRET || 'ziproo_2026_super_secure_identity
 export interface StoredAdmin {
   id: string;
   username: string;
+  email?: string;
   name: string;
-  role: 'Founder & Creative Director' | 'Co-founder of ZIPROO' | 'Operations & Inventory Lead';
+  role: string;
+  status?: 'ACTIVE' | 'INACTIVE';
   salt: string;
   hash: string;
   lastLogin?: string;
+  createdAt?: string;
 }
 
 export function hashPassword(password: string, salt = crypto.randomBytes(16).toString('hex')): { salt: string; hash: string } {

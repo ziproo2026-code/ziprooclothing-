@@ -16,7 +16,59 @@ import {
   getMsg91Config,
   type EmailEvent,
 } from './src/server/notifications.js';
-import type { AdminUser, Product, CompanyUpdate, Order, ProductReview, Customer, CustomerMessage, OrderStatus, Seller, OrderItem } from './src/types/index.js';
+import type {
+  AdminUser,
+  Product,
+  CompanyUpdate,
+  Order,
+  ProductReview,
+  Customer,
+  CustomerMessage,
+  OrderStatus,
+  Seller,
+  OrderItem,
+  AuditLogEntry,
+  PaymentQrCode,
+  BankReceivingDetails,
+  IntroVideoItem,
+  HomepageBackgroundItem,
+  PaymentStatus,
+} from './src/types/index.js';
+
+// Audit Logger Helper function
+export function recordAuditLog(entry: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  details?: string;
+  relatedId?: string;
+}) {
+  try {
+    const db = loadDatabase();
+    db.auditLogs = db.auditLogs || [];
+    const newLog: AuditLogEntry = {
+      id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      userId: entry.userId,
+      userName: entry.userName,
+      userRole: entry.userRole,
+      action: entry.action,
+      details: entry.details,
+      relatedId: entry.relatedId,
+      timestamp: new Date().toISOString(),
+    };
+    db.auditLogs.unshift(newLog);
+    // Keep last 1000 logs
+    if (db.auditLogs.length > 1000) {
+      db.auditLogs = db.auditLogs.slice(0, 1000);
+    }
+    saveDatabase(db);
+    return newLog;
+  } catch (err) {
+    console.warn('[ZIPROO] Failed to write audit log:', err);
+    return null;
+  }
+}
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -48,6 +100,10 @@ function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFuncti
   const user = verifyToken(token);
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized: Invalid or expired session' });
+  }
+
+  if (user.normalizedRole !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden: Administrator privileges required to access this resource.' });
   }
 
   req.adminUser = user;
@@ -157,6 +213,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   const admin = db.admins.find(
     (a) =>
       a.username.toLowerCase() === cleanUser ||
+      (a.email && a.email.toLowerCase() === cleanUser) ||
       (cleanUser === 'ranjith_ziproo' && a.id === 'usr_admin_2') ||
       (cleanUser === 'manager_ziproo' && a.id === 'usr_admin_2')
   );
@@ -177,6 +234,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   const adminPayload: AdminUser = {
     id: admin.id,
     username: admin.username,
+    email: admin.email,
     name: admin.name,
     role: admin.role,
     lastLogin: admin.lastLogin,
@@ -187,6 +245,180 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     token,
     user: adminPayload,
     message: `Welcome back, ${admin.name}`,
+  });
+});
+
+// POST /api/auth/portal-login (Common Sign-In Portal for Super Admin, Admin, Seller, Customer)
+app.post('/api/auth/portal-login', (req: Request, res: Response) => {
+  const { identifier, username, email, password } = req.body;
+  const loginId = (identifier || username || email || '').trim().toLowerCase();
+  const loginPass = (password || '').trim();
+
+  if (!loginId || !loginPass) {
+    return res.status(400).json({ error: 'Username/Email and Password are required' });
+  }
+
+  const db = loadDatabase();
+
+  // 1. Check Administrator Accounts (Super Admin / Admin)
+  const admin = db.admins.find(
+    (a) =>
+      a.username.toLowerCase() === loginId ||
+      (a.email && a.email.toLowerCase() === loginId) ||
+      (loginId === 'ranjith_ziproo' && a.id === 'usr_admin_2') ||
+      (loginId === 'manager_ziproo' && a.id === 'usr_admin_2') ||
+      (loginId === 'admin@ziproo.com' && (a.id === 'usr_admin_1' || a.username === 'rohithsharma'))
+  );
+
+  if (admin) {
+    if (admin.status === 'INACTIVE') {
+      return res.status(403).json({ error: 'This administrator account has been deactivated. Please contact Super Admin.' });
+    }
+
+    let isValid = verifyPassword(loginPass, admin.salt, admin.hash);
+    // Backward compatibility for test/default credentials
+    if (!isValid && loginPass === 'admin' && (admin.id === 'usr_admin_1' || admin.username === 'rohithsharma')) {
+      isValid = true;
+    }
+
+    if (isValid) {
+      admin.lastLogin = new Date().toISOString();
+      saveDatabase(db);
+
+      const isSuperAdmin = admin.id === 'usr_admin_1' || admin.username === 'rohithsharma' || (admin.role && admin.role.toLowerCase().includes('founder'));
+      const determinedRole = isSuperAdmin ? 'super_admin' : 'admin';
+
+      const adminPayload: AdminUser = {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role || (isSuperAdmin ? 'Super Admin' : 'Admin'),
+        lastLogin: admin.lastLogin,
+        status: admin.status || 'ACTIVE',
+      };
+
+      const token = generateToken({
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        name: admin.name,
+        role: determinedRole,
+      });
+
+      recordAuditLog({
+        userId: admin.id,
+        userName: admin.name,
+        userRole: determinedRole,
+        action: 'Portal Sign-In',
+        details: `Successful sign-in as ${determinedRole.toUpperCase()}`,
+      });
+
+      return res.json({
+        success: true,
+        role: determinedRole,
+        userRole: determinedRole,
+        token,
+        user: adminPayload,
+        redirectUrl: '/admin',
+        message: `Welcome back, ${admin.name}`,
+      });
+    }
+  }
+
+  // 2. Check Seller Accounts
+  const seller = (db.sellers || []).find(
+    (s) =>
+      s.email.toLowerCase() === loginId ||
+      (s.phone && s.phone.replace(/\D/g, '') === loginId.replace(/\D/g, '')) ||
+      (s.id && s.id.toLowerCase() === loginId)
+  );
+
+  if (seller && seller.salt && seller.hash) {
+    const isSellerValid = verifyPassword(loginPass, seller.salt, seller.hash);
+    if (isSellerValid) {
+      if (seller.status === 'SUSPENDED') {
+        return res.status(403).json({
+          error: 'Your seller account has been suspended by administration.',
+          reason: seller.suspendedReason || 'Administrative suspension',
+        });
+      }
+
+      const sellerPayload = {
+        id: seller.id,
+        role: 'seller',
+        name: seller.name,
+        email: seller.email,
+        businessName: seller.businessName,
+        status: seller.status,
+      };
+
+      const token = generateToken({
+        id: seller.id,
+        role: 'SELLER',
+        name: seller.name,
+        email: seller.email,
+        businessName: seller.businessName,
+      });
+
+      recordAuditLog({
+        userId: seller.id,
+        userName: seller.businessName || seller.name,
+        userRole: 'seller',
+        action: 'Portal Sign-In',
+        details: `Seller logged in successfully`,
+      });
+
+      const { salt, hash, ...safeSeller } = seller;
+      return res.json({
+        success: true,
+        role: 'seller',
+        userRole: 'seller',
+        token,
+        user: safeSeller,
+        seller: safeSeller,
+        redirectUrl: '/seller',
+        message: `Welcome to Seller Dashboard, ${seller.businessName}`,
+      });
+    }
+  }
+
+  // 3. Check Customer Accounts
+  const customer = (db.customers || []).find(
+    (c) =>
+      (c.email && c.email.toLowerCase() === loginId) ||
+      (c.phone && c.phone.replace(/\D/g, '') === loginId.replace(/\D/g, ''))
+  );
+
+  if (customer && customer.salt && customer.hash) {
+    const isCustValid = verifyPassword(loginPass, customer.salt, customer.hash);
+    if (isCustValid) {
+      customer.lastLoginAt = new Date().toISOString();
+      saveDatabase(db);
+
+      const token = generateToken({
+        id: customer.id,
+        role: 'CUSTOMER',
+        name: customer.name,
+        email: customer.email,
+      });
+
+      const { salt, hash, ...safeCustomer } = customer;
+      return res.json({
+        success: true,
+        role: 'customer',
+        userRole: 'customer',
+        token,
+        user: safeCustomer,
+        customer: safeCustomer,
+        redirectUrl: '/account',
+        message: `Welcome back, ${customer.name}`,
+      });
+    }
+  }
+
+  return res.status(401).json({
+    error: 'Invalid username/email or password. Please verify your credentials.',
   });
 });
 
@@ -612,18 +844,20 @@ app.put('/api/admin/portal-settings', requireAdmin, (req: AuthenticatedRequest, 
 // 4. Important: Do not use fake notifications or pretend order was placed if backend fails. Confirm only after order is saved.
 app.post('/api/orders', async (req: Request, res: Response) => {
   try {
-    const {
-      customerName,
-      mobileNumber,
-      email,
-      completeAddress,
-      city,
-      state,
-      pinCode,
-      items,
-      paymentMethod,
-      transactionReference,
-    } = req.body;
+    const rawCustomer = req.body.customer || {};
+    const rawShipping = rawCustomer.shippingAddress || req.body.shippingAddress || {};
+
+    const customerName = (req.body.customerName || rawCustomer.name || '').trim();
+    const mobileNumber = (req.body.mobileNumber || rawCustomer.phone || '').trim();
+    const email = (req.body.email || rawCustomer.email || '').trim();
+    const completeAddress = (req.body.completeAddress || rawShipping.address || rawCustomer.address || '').trim();
+    const city = (req.body.city || rawShipping.city || rawCustomer.city || '').trim();
+    const state = (req.body.state || rawShipping.state || rawCustomer.state || '').trim();
+    const pinCode = (req.body.pinCode || rawShipping.pincode || rawShipping.pinCode || rawCustomer.pinCode || '').trim();
+
+    const items = req.body.items;
+    const paymentMethodRaw = (req.body.paymentMethod || 'cod').toString();
+    const transactionReference = req.body.transactionReference;
 
     if (!customerName || !mobileNumber || !email || !completeAddress || !city || !state || !pinCode) {
       return res.status(400).json({
@@ -721,11 +955,22 @@ app.post('/api/orders', async (req: Request, res: Response) => {
     const createdAt = new Date().toISOString();
 
     // Requirements:
-    // For COD orders, confirm order immediately after successful submission
-    // For prepaid orders, initial state is processing verification
-    const isCod = paymentMethod === 'cod';
-    const initialOrderStatus: OrderStatus = isCod ? 'Order Confirmed' : 'Processing';
-    const initialPaymentStatus: Order['paymentStatus'] = isCod ? 'Pending' : 'Processing';
+    // For Cash on Delivery: customer places COD order -> order status = "Cash Pending" (or Pending)
+    // For online payments: Payment Pending / Payment Processing
+    const isCod = paymentMethodRaw.toLowerCase() === 'cod' || paymentMethodRaw.toLowerCase() === 'cash on delivery';
+    const initialOrderStatus: OrderStatus = isCod ? 'Confirmed' : 'Processing';
+    const initialPaymentStatus: PaymentStatus = isCod ? 'Cash Pending' : (transactionReference ? 'Payment Processing' : 'Payment Pending');
+
+    // Normalize payment method label
+    let normalizedPaymentMethod = 'cod';
+    const pmLower = paymentMethodRaw.toLowerCase();
+    if (pmLower.includes('gpay') || pmLower.includes('google')) normalizedPaymentMethod = 'gpay';
+    else if (pmLower.includes('phonepe')) normalizedPaymentMethod = 'phonepe';
+    else if (pmLower.includes('paytm')) normalizedPaymentMethod = 'paytm';
+    else if (pmLower.includes('upi') || pmLower.includes('qr')) normalizedPaymentMethod = 'online_portal';
+    else if (pmLower.includes('razorpay')) normalizedPaymentMethod = 'razorpay';
+    else if (isCod) normalizedPaymentMethod = 'cod';
+    else normalizedPaymentMethod = paymentMethodRaw;
 
     // Associate order with customer ID (from authenticated token or profile lookup)
     let customerId: string | undefined;
@@ -785,7 +1030,7 @@ app.post('/api/orders', async (req: Request, res: Response) => {
       shipping,
       totalAmount,
       taxSummary,
-      paymentMethod: paymentMethod === 'online_portal' ? 'online_portal' : paymentMethod === 'razorpay' ? 'razorpay' : 'cod',
+      paymentMethod: normalizedPaymentMethod,
       paymentStatus: initialPaymentStatus,
       transactionReference: transactionReference ? String(transactionReference).trim() : undefined,
       orderStatus: initialOrderStatus,
@@ -1732,88 +1977,258 @@ app.delete('/api/admin/messages/:id', requireAdmin, (req: AuthenticatedRequest, 
   res.json({ success: true, id });
 });
 
-// ----------------- ADMIN 1 EXCLUSIVE ADMIN CREATION APIS -----------------
+// ----------------- ADMIN MANAGEMENT APIS -----------------
 
-// POST /api/admin/create-admin (Strictly Admin 1 only!)
-app.post('/api/admin/create-admin', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-  const currentAdmin = req.adminUser;
-  // USER REQUIREMENT: creating new admin for website that can be created by admin1 only
-  if (currentAdmin?.username !== 'rohithsharma' && currentAdmin?.id !== 'usr_admin_1') {
-    return res.status(403).json({
-      error: 'Permission Denied: Only Admin 1 (Rohith Sharma) has authorization to create new website administrators.',
-    });
+// POST /api/admin/admins (Create Admin account)
+app.post('/api/admin/admins', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { name, username, email, password, role, status } = req.body;
+  const userIdentifier = (email || username || '').trim().toLowerCase();
+
+  if (!name || !userIdentifier || !password) {
+    return res.status(400).json({ error: 'Name, Username/Email, and Password are required' });
   }
 
-  const { username, name, role, password } = req.body;
-  if (!username || !password || !name) {
-    return res.status(400).json({ error: 'Username, Full Name, and Password are required' });
-  }
-
-  const cleanUsername = username.trim().toLowerCase();
   const db = loadDatabase();
+  const cleanEmail = email ? email.trim().toLowerCase() : (userIdentifier.includes('@') ? userIdentifier : undefined);
+  const cleanUsername = username ? username.trim().toLowerCase() : userIdentifier.split('@')[0];
 
-  const existing = db.admins.find((a) => a.username.toLowerCase() === cleanUsername);
+  const existing = db.admins.find(
+    (a) =>
+      a.username.toLowerCase() === cleanUsername ||
+      (cleanEmail && a.email && a.email.toLowerCase() === cleanEmail)
+  );
+
   if (existing) {
-    return res.status(400).json({ error: `An administrator with username '${cleanUsername}' already exists.` });
+    return res.status(400).json({ error: `An administrator with identifier '${userIdentifier}' already exists.` });
   }
 
-  const hashed = hashPassword(password);
+  const hashed = hashPassword(password.trim());
   const newAdminId = `usr_admin_${Date.now()}`;
-  const newAdmin = {
+  const newAdmin: StoredAdmin = {
     id: newAdminId,
     username: cleanUsername,
+    email: cleanEmail,
     name: name.trim(),
-    role: role ? role.trim() : 'Operations & Atelier Lead',
+    role: role || 'admin',
+    status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     salt: hashed.salt,
     hash: hashed.hash,
+    createdAt: new Date().toISOString(),
+    lastLogin: undefined,
+  };
+
+  db.admins.push(newAdmin);
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Admin Created',
+    details: `Created admin "${newAdmin.name}" (${newAdmin.username}) with status ${newAdmin.status}`,
+    relatedId: newAdmin.id,
+  });
+
+  const { salt, hash, ...safeAdmin } = newAdmin;
+  res.status(201).json({
+    success: true,
+    message: 'Admin account created successfully',
+    admin: safeAdmin,
+  });
+});
+
+// Legacy Alias for create-admin
+app.post('/api/admin/create-admin', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { username, name, role, password, email, status } = req.body;
+  const userIdentifier = (email || username || '').trim().toLowerCase();
+  if (!name || !userIdentifier || !password) {
+    return res.status(400).json({ error: 'Name, Username, and Password are required' });
+  }
+
+  const db = loadDatabase();
+  const cleanUsername = username ? username.trim().toLowerCase() : userIdentifier.split('@')[0];
+  const cleanEmail = email ? email.trim().toLowerCase() : (userIdentifier.includes('@') ? userIdentifier : undefined);
+
+  const existing = db.admins.find((a) => a.username.toLowerCase() === cleanUsername || (cleanEmail && a.email && a.email.toLowerCase() === cleanEmail));
+  if (existing) {
+    return res.status(400).json({ error: `An administrator with identifier '${userIdentifier}' already exists.` });
+  }
+
+  const hashed = hashPassword(password.trim());
+  const newAdminId = `usr_admin_${Date.now()}`;
+  const newAdmin: StoredAdmin = {
+    id: newAdminId,
+    username: cleanUsername,
+    email: cleanEmail,
+    name: name.trim(),
+    role: role || 'admin',
+    status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    salt: hashed.salt,
+    hash: hashed.hash,
+    createdAt: new Date().toISOString(),
     lastLogin: new Date().toISOString(),
   };
 
   db.admins.push(newAdmin);
   saveDatabase(db);
 
-  res.status(201).json({
-    success: true,
-    admin: {
-      id: newAdmin.id,
-      username: newAdmin.username,
-      name: newAdmin.name,
-      role: newAdmin.role,
-      lastLogin: newAdmin.lastLogin,
-    },
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Admin Created',
+    details: `Created admin account ${newAdmin.name}`,
+    relatedId: newAdmin.id,
   });
+
+  const { salt, hash, ...safeAdmin } = newAdmin;
+  res.status(201).json({ success: true, admin: safeAdmin });
 });
 
-// GET /api/admin/admins (Admin only)
+// GET /api/admin/admins (List all admins without password hashes)
 app.get('/api/admin/admins', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
   const db = loadDatabase();
   const safeAdmins = db.admins.map((a) => ({
     id: a.id,
     username: a.username,
+    email: a.email,
     name: a.name,
     role: a.role,
+    status: a.status || 'ACTIVE',
     lastLogin: a.lastLogin,
+    createdAt: a.createdAt,
     isAdmin1: a.id === 'usr_admin_1' || a.username === 'rohithsharma',
   }));
-  res.json(safeAdmins);
+  res.json({ success: true, admins: safeAdmins });
 });
 
-// DELETE /api/admin/admins/:id (Admin 1 only)
-app.delete('/api/admin/admins/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-  const currentAdmin = req.adminUser;
-  if (currentAdmin?.username !== 'rohithsharma' && currentAdmin?.id !== 'usr_admin_1') {
-    return res.status(403).json({ error: 'Permission Denied: Only Admin 1 can remove administrators.' });
+// PUT /api/admin/admins/:id (Edit Admin details)
+app.put('/api/admin/admins/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { name, email, username, role, status } = req.body;
+  const db = loadDatabase();
+
+  const admin = db.admins.find((a) => a.id === id);
+  if (!admin) {
+    return res.status(404).json({ error: 'Admin account not found' });
   }
 
+  if (name) admin.name = name.trim();
+  if (email) admin.email = email.trim().toLowerCase();
+  if (username) admin.username = username.trim().toLowerCase();
+  if (role) admin.role = role.trim();
+  if (status && ['ACTIVE', 'INACTIVE'].includes(status)) {
+    admin.status = status;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Admin Updated',
+    details: `Updated admin profile for "${admin.name}"`,
+    relatedId: admin.id,
+  });
+
+  const { salt, hash, ...safeAdmin } = admin;
+  res.json({ success: true, message: 'Admin updated successfully', admin: safeAdmin });
+});
+
+// PUT /api/admin/admins/:id/status (Activate / Deactivate Admin)
+app.put('/api/admin/admins/:id/status', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
+    return res.status(400).json({ error: "Status must be 'ACTIVE' or 'INACTIVE'" });
+  }
+
   if (id === 'usr_admin_1') {
-    return res.status(400).json({ error: 'Cannot delete primary Admin 1 account.' });
+    return res.status(400).json({ error: 'Cannot deactivate primary Super Admin account.' });
   }
 
   const db = loadDatabase();
-  db.admins = db.admins.filter((a) => a.id !== id && a.username !== 'rohithsharma');
+  const admin = db.admins.find((a) => a.id === id);
+  if (!admin) {
+    return res.status(404).json({ error: 'Admin account not found' });
+  }
+
+  admin.status = status;
   saveDatabase(db);
-  res.json({ success: true, id });
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: status === 'ACTIVE' ? 'Admin Activated' : 'Admin Deactivated',
+    details: `${status === 'ACTIVE' ? 'Activated' : 'Deactivated'} admin account for ${admin.name}`,
+    relatedId: admin.id,
+  });
+
+  const { salt, hash, ...safeAdmin } = admin;
+  res.json({ success: true, admin: safeAdmin, message: `Admin account marked ${status}` });
+});
+
+// POST /api/admin/admins/:id/reset-password (Secure password reset)
+app.post('/api/admin/admins/:id/reset-password', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.trim().length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  const db = loadDatabase();
+  const admin = db.admins.find((a) => a.id === id);
+  if (!admin) {
+    return res.status(404).json({ error: 'Admin account not found' });
+  }
+
+  const hashed = hashPassword(newPassword.trim());
+  admin.salt = hashed.salt;
+  admin.hash = hashed.hash;
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Admin Password Reset',
+    details: `Password reset for admin "${admin.name}"`,
+    relatedId: admin.id,
+  });
+
+  res.json({ success: true, message: `Password for administrator "${admin.name}" has been securely updated.` });
+});
+
+// DELETE /api/admin/admins/:id (Remove an Admin)
+app.delete('/api/admin/admins/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  if (id === 'usr_admin_1') {
+    return res.status(400).json({ error: 'Cannot delete primary Super Admin account.' });
+  }
+
+  const db = loadDatabase();
+  const adminToDelete = db.admins.find((a) => a.id === id);
+  if (!adminToDelete) {
+    return res.status(404).json({ error: 'Admin account not found' });
+  }
+
+  db.admins = db.admins.filter((a) => a.id !== id);
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Admin Removed',
+    details: `Removed admin account "${adminToDelete.name}" (${adminToDelete.username})`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: `Admin account "${adminToDelete.name}" removed successfully`, id });
 });
 
 // =========================================================================
@@ -2441,9 +2856,17 @@ app.get('/api/admin/sellers', requireAdmin, (_req: AuthenticatedRequest, res: Re
 // POST /api/admin/sellers
 // Admin directly creates / onboards seller
 app.post('/api/admin/sellers', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-  const { name, businessName, email, phone, password, status, commissionPercentage, gstNumber, address, city, state, pinCode, description } = req.body;
-  if (!name || !businessName || !email || !phone) {
-    return res.status(400).json({ error: 'Name, Business Name, Email, and Phone are required' });
+  const sellerName = (req.body.name || req.body.sellerName || req.body.businessName || req.body.storeName || '').trim();
+  const businessName = (req.body.businessName || req.body.storeName || req.body.name || req.body.sellerName || '').trim();
+  const email = (req.body.email || req.body.username || '').trim().toLowerCase();
+  const phone = (req.body.phone || req.body.contact || '+91 0000000000').trim();
+  const password = req.body.password;
+  const status = req.body.status || 'ACTIVE';
+  const commissionPercentage = req.body.commissionPercentage ?? req.body.commissionRate;
+  const { gstNumber, address, city, state, pinCode, description } = req.body;
+
+  if (!sellerName || !businessName || !email) {
+    return res.status(400).json({ error: 'Seller Name/Store Name, and Email are required' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
@@ -2459,10 +2882,10 @@ app.post('/api/admin/sellers', requireAdmin, (req: AuthenticatedRequest, res: Re
 
   const newSeller: Seller = {
     id: `seller_${Date.now()}`,
-    name: name.trim(),
-    businessName: businessName.trim(),
+    name: sellerName,
+    businessName: businessName,
     email: cleanEmail,
-    phone: phone.trim(),
+    phone: phone,
     status: status || 'ACTIVE',
     commissionPercentage: commissionPercentage !== undefined ? Number(commissionPercentage) : 10,
     gstNumber: gstNumber ? gstNumber.trim() : undefined,
@@ -2610,7 +3033,534 @@ app.delete('/api/admin/sellers/:id', requireAdmin, (req: AuthenticatedRequest, r
   res.json({ success: true, message: `Seller "${seller.businessName}" removed`, id });
 });
 
-// ----------------- 5. ADMIN PRODUCT APPROVAL SYSTEM (PART 9 & PART 10) -----------------
+// ----------------- 6. ADMIN PAYMENT QR CODE MANAGEMENT -----------------
+
+// GET /api/admin/qr-codes (Admin only)
+app.get('/api/admin/qr-codes', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, qrCodes: db.qrCodes || [] });
+});
+
+// POST /api/admin/qr-codes (Admin only - Upload / Add QR code)
+app.post('/api/admin/qr-codes', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { label, upiId, imageUrl, isActive } = req.body;
+  if (!label || !imageUrl) {
+    return res.status(400).json({ error: 'Label and Image URL are required' });
+  }
+
+  const db = loadDatabase();
+  db.qrCodes = db.qrCodes || [];
+
+  const shouldBeActive = Boolean(isActive || db.qrCodes.length === 0);
+  if (shouldBeActive) {
+    db.qrCodes.forEach((qr) => (qr.isActive = false));
+  }
+
+  const newQr: PaymentQrCode = {
+    id: `qr_${Date.now()}`,
+    label: label.trim(),
+    upiId: upiId ? upiId.trim() : undefined,
+    imageUrl: imageUrl.trim(),
+    isActive: shouldBeActive,
+    uploadedBy: req.adminUser!.id,
+    createdAt: new Date().toISOString(),
+  };
+
+  db.qrCodes.unshift(newQr);
+
+  // Sync with store settings online receiving portal
+  if (shouldBeActive) {
+    db.settings.onlineReceivingPortal.qrCodeUrl = newQr.imageUrl;
+    if (newQr.upiId) {
+      db.settings.onlineReceivingPortal.upiId = newQr.upiId;
+    }
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'QR Code Added',
+    details: `Added new QR code "${newQr.label}" (Active: ${shouldBeActive})`,
+    relatedId: newQr.id,
+  });
+
+  res.status(201).json({ success: true, message: 'Payment QR code added', qr: newQr, qrCode: newQr });
+});
+
+// PUT /api/admin/qr-codes/:id/active (Admin only - Set which QR code is active)
+app.put('/api/admin/qr-codes/:id/active', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.qrCodes = db.qrCodes || [];
+
+  const targetQr = db.qrCodes.find((qr) => qr.id === id);
+  if (!targetQr) {
+    return res.status(404).json({ error: 'QR Code not found' });
+  }
+
+  db.qrCodes.forEach((qr) => {
+    qr.isActive = qr.id === id;
+  });
+
+  db.settings.onlineReceivingPortal.qrCodeUrl = targetQr.imageUrl;
+  if (targetQr.upiId) {
+    db.settings.onlineReceivingPortal.upiId = targetQr.upiId;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Active QR Code Changed',
+    details: `Activated QR code "${targetQr.label}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'Active QR code updated', qr: targetQr });
+});
+
+// DELETE /api/admin/qr-codes/:id (Admin only)
+app.delete('/api/admin/qr-codes/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.qrCodes = db.qrCodes || [];
+
+  const target = db.qrCodes.find((qr) => qr.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'QR Code not found' });
+  }
+
+  db.qrCodes = db.qrCodes.filter((qr) => qr.id !== id);
+  // If active was deleted and other exists, set first to active
+  if (target.isActive && db.qrCodes.length > 0) {
+    db.qrCodes[0].isActive = true;
+    db.settings.onlineReceivingPortal.qrCodeUrl = db.qrCodes[0].imageUrl;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'QR Code Removed',
+    details: `Removed QR code "${target.label}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'QR Code removed', id });
+});
+
+// Public Endpoint to fetch active QR code for checkout page
+app.get('/api/public/active-qr', (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const activeQr = (db.qrCodes || []).find((q) => q.isActive) || (db.qrCodes || [])[0];
+  res.json({
+    success: true,
+    qr: activeQr || null,
+    qrCode: activeQr || null,
+  });
+});
+
+// ----------------- 7. ADMIN BANK / PAYMENT RECEIVING DETAILS -----------------
+
+// GET /api/admin/bank-details (Admin only)
+app.get('/api/admin/bank-details', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, bankDetails: db.bankDetails });
+});
+
+// PUT /api/admin/bank-details (Admin only - Add/Update receiving details)
+app.put('/api/admin/bank-details', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  const current = db.bankDetails || {
+    bankName: '',
+    accountHolderName: '',
+    accountNumber: '',
+    ifscCode: '',
+    upiId: '',
+  };
+
+  const updated: BankReceivingDetails = {
+    ...current,
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+    updatedBy: req.adminUser!.id,
+  };
+
+  db.bankDetails = updated;
+
+  // Sync primary UPI ID and instruction bank details in store settings
+  if (updated.upiId) {
+    db.settings.onlineReceivingPortal.upiId = updated.upiId;
+  }
+  db.settings.onlineReceivingPortal.bankAccountDetails = `Account Name: ${updated.accountHolderName} | Bank: ${updated.bankName} | A/C No: ${updated.accountNumber} | IFSC: ${updated.ifscCode}`;
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Bank Details Updated',
+    details: `Updated banking receiving details for ${updated.bankName} (${updated.accountHolderName})`,
+  });
+
+  res.json({ success: true, message: 'Bank details updated successfully', bankDetails: updated });
+});
+
+// Public sanitized payment receiver info for checkout (protects full account number)
+app.get('/api/public/payment-details', (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const b = db.bankDetails;
+  const activeQr = (db.qrCodes || []).find((q) => q.isActive);
+
+  res.json({
+    success: true,
+    upiId: b?.upiId || db.settings.onlineReceivingPortal.upiId,
+    gpayUpiId: b?.gpayUpiId || b?.upiId,
+    phonepeUpiId: b?.phonepeUpiId || b?.upiId,
+    paytmUpiId: b?.paytmUpiId || b?.upiId,
+    bankName: b?.bankName,
+    accountHolderName: b?.accountHolderName,
+    ifscCode: b?.ifscCode,
+    activeQrUrl: activeQr?.imageUrl || db.settings.onlineReceivingPortal.qrCodeUrl,
+  });
+});
+
+// ----------------- 8. ADMIN INTRO VIDEO MANAGEMENT -----------------
+
+// GET /api/admin/intro-videos (Admin only)
+app.get('/api/admin/intro-videos', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, videos: db.introVideos || [] });
+});
+
+// POST /api/admin/intro-videos (Admin only - Upload / Add intro video)
+app.post('/api/admin/intro-videos', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { title, videoUrl, description, isActive } = req.body;
+  if (!title || !videoUrl) {
+    return res.status(400).json({ error: 'Title and Video URL are required' });
+  }
+
+  const db = loadDatabase();
+  db.introVideos = db.introVideos || [];
+
+  const shouldBeActive = Boolean(isActive || db.introVideos.length === 0);
+  if (shouldBeActive) {
+    db.introVideos.forEach((v) => (v.isActive = false));
+  }
+
+  const newVideo: IntroVideoItem = {
+    id: `vid_${Date.now()}`,
+    title: title.trim(),
+    videoUrl: videoUrl.trim(),
+    description: description ? description.trim() : undefined,
+    isActive: shouldBeActive,
+    uploadedBy: req.adminUser!.id,
+    createdAt: new Date().toISOString(),
+  };
+
+  db.introVideos.unshift(newVideo);
+
+  if (shouldBeActive) {
+    db.settings.introVideoUrl = newVideo.videoUrl;
+    db.settings.introVideoTitle = newVideo.title;
+    if (newVideo.description) {
+      db.settings.introVideoDescription = newVideo.description;
+    }
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Intro Video Added',
+    details: `Uploaded new intro video "${newVideo.title}"`,
+    relatedId: newVideo.id,
+  });
+
+  res.status(201).json({ success: true, message: 'Intro video added successfully', video: newVideo });
+});
+
+// PUT /api/admin/intro-videos/:id/active (Admin only - Set active intro video)
+app.put('/api/admin/intro-videos/:id/active', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.introVideos = db.introVideos || [];
+
+  const target = db.introVideos.find((v) => v.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'Video not found' });
+  }
+
+  db.introVideos.forEach((v) => {
+    v.isActive = v.id === id;
+  });
+
+  db.settings.introVideoUrl = target.videoUrl;
+  db.settings.introVideoTitle = target.title;
+  if (target.description) {
+    db.settings.introVideoDescription = target.description;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Intro Video Activated',
+    details: `Activated intro video "${target.title}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'Active intro video updated', video: target });
+});
+
+// DELETE /api/admin/intro-videos/:id (Admin only)
+app.delete('/api/admin/intro-videos/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.introVideos = db.introVideos || [];
+
+  const target = db.introVideos.find((v) => v.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'Video not found' });
+  }
+
+  db.introVideos = db.introVideos.filter((v) => v.id !== id);
+  if (target.isActive && db.introVideos.length > 0) {
+    db.introVideos[0].isActive = true;
+    db.settings.introVideoUrl = db.introVideos[0].videoUrl;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Intro Video Removed',
+    details: `Removed intro video "${target.title}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'Intro video removed', id });
+});
+
+// Public Active Intro Video endpoint
+app.get('/api/public/active-intro-video', (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const active = (db.introVideos || []).find((v) => v.isActive) || (db.introVideos || [])[0];
+  res.json({
+    success: true,
+    video: active || null,
+    videoUrl: active?.videoUrl || db.settings.introVideoUrl || '/intro_video.mp4',
+  });
+});
+
+// ----------------- 9. ADMIN HOMEPAGE BACKGROUND MANAGEMENT -----------------
+
+// GET /api/admin/homepage-backgrounds (Admin only)
+app.get('/api/admin/homepage-backgrounds', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, backgrounds: db.homepageBackgrounds || [] });
+});
+
+// POST /api/admin/homepage-backgrounds (Admin only - Upload / Add homepage background)
+app.post('/api/admin/homepage-backgrounds', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { title, imageUrl, isActive } = req.body;
+  if (!title || !imageUrl) {
+    return res.status(400).json({ error: 'Title and Image URL are required' });
+  }
+
+  const db = loadDatabase();
+  db.homepageBackgrounds = db.homepageBackgrounds || [];
+
+  const shouldBeActive = Boolean(isActive || db.homepageBackgrounds.length === 0);
+  if (shouldBeActive) {
+    db.homepageBackgrounds.forEach((bg) => (bg.isActive = false));
+  }
+
+  const newBg: HomepageBackgroundItem = {
+    id: `bg_${Date.now()}`,
+    title: title.trim(),
+    imageUrl: imageUrl.trim(),
+    isActive: shouldBeActive,
+    uploadedBy: req.adminUser!.id,
+    createdAt: new Date().toISOString(),
+  };
+
+  db.homepageBackgrounds.unshift(newBg);
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Homepage Background Added',
+    details: `Added new background image "${newBg.title}"`,
+    relatedId: newBg.id,
+  });
+
+  res.status(201).json({ success: true, message: 'Homepage background added', background: newBg });
+});
+
+// PUT /api/admin/homepage-backgrounds/:id/active (Admin only)
+app.put('/api/admin/homepage-backgrounds/:id/active', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.homepageBackgrounds = db.homepageBackgrounds || [];
+
+  const target = db.homepageBackgrounds.find((bg) => bg.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'Background not found' });
+  }
+
+  db.homepageBackgrounds.forEach((bg) => {
+    bg.isActive = bg.id === id;
+  });
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Homepage Background Activated',
+    details: `Activated background image "${target.title}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'Active homepage background updated', background: target });
+});
+
+// DELETE /api/admin/homepage-backgrounds/:id (Admin only)
+app.delete('/api/admin/homepage-backgrounds/:id', requireAdmin, (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const db = loadDatabase();
+  db.homepageBackgrounds = db.homepageBackgrounds || [];
+
+  const target = db.homepageBackgrounds.find((bg) => bg.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'Background not found' });
+  }
+
+  db.homepageBackgrounds = db.homepageBackgrounds.filter((bg) => bg.id !== id);
+  if (target.isActive && db.homepageBackgrounds.length > 0) {
+    db.homepageBackgrounds[0].isActive = true;
+  }
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Homepage Background Removed',
+    details: `Removed background "${target.title}"`,
+    relatedId: id,
+  });
+
+  res.json({ success: true, message: 'Homepage background removed', id });
+});
+
+// Public Active Homepage Background endpoint
+app.get('/api/public/active-background', (_req: Request, res: Response) => {
+  const db = loadDatabase();
+  const active = (db.homepageBackgrounds || []).find((bg) => bg.isActive) || (db.homepageBackgrounds || [])[0];
+  res.json({
+    success: true,
+    background: active || null,
+    imageUrl: active?.imageUrl || null,
+  });
+});
+
+// ----------------- 10. ADMIN AUDIT LOG APIS -----------------
+
+// GET /api/admin/audit-logs (Admin only)
+app.get('/api/admin/audit-logs', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const db = loadDatabase();
+  res.json({ success: true, logs: db.auditLogs || [] });
+});
+
+// ----------------- 11. PAYMENT STATUS & ORDER WORKFLOW APIS -----------------
+
+// PATCH /api/admin/orders/:id/payment-status (Authorized Admin only)
+app.patch('/api/admin/orders/:id/payment-status', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { paymentStatus, orderStatus, note } = req.body;
+
+  if (!paymentStatus) {
+    return res.status(400).json({ error: 'paymentStatus is required' });
+  }
+
+  const db = loadDatabase();
+  const order = db.orders.find((o) => o.id === id || o.orderNumber === id);
+  if (!order) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  const prevPaymentStatus = order.paymentStatus;
+  const prevOrderStatus = order.orderStatus;
+
+  order.paymentStatus = paymentStatus as any;
+
+  if (orderStatus) {
+    order.orderStatus = orderStatus as OrderStatus;
+  } else if (paymentStatus === 'Payment Successful' || paymentStatus === 'Cash Received') {
+    order.orderStatus = 'Confirmed';
+  }
+
+  order.notificationLog = order.notificationLog || {
+    adminEmailSent: false,
+    adminEmailRecipient: db.settings.adminNotificationEmail || 'ziprooclothing@gmail.com',
+    customerSmsSent: false,
+    customerSmsRecipient: order.mobileNumber,
+  };
+
+  order.notificationLog.statusHistory = order.notificationLog.statusHistory || [];
+  order.notificationLog.statusHistory.push({
+    status: order.orderStatus,
+    timestamp: new Date().toISOString(),
+    notificationSent: true,
+    note: note || `Payment status changed from ${prevPaymentStatus} to ${paymentStatus}. Order status: ${order.orderStatus}`,
+  });
+
+  saveDatabase(db);
+
+  recordAuditLog({
+    userId: req.adminUser!.id,
+    userName: req.adminUser!.name,
+    userRole: req.adminUser!.role,
+    action: 'Payment Status Changed',
+    details: `Order #${order.orderNumber}: Payment changed from "${prevPaymentStatus}" to "${paymentStatus}". Order: "${order.orderStatus}"`,
+    relatedId: order.id,
+  });
+
+  if (paymentStatus === 'Payment Successful' || paymentStatus === 'Cash Received') {
+    try {
+      await sendCustomerOrderEmail(order, 'payment_successful', `Payment verified: ${paymentStatus}. Your order is confirmed.`);
+    } catch (e) {
+      console.warn('Customer email notify note:', e);
+    }
+  }
+
+  const orderResponse = {
+    ...order,
+    status: order.orderStatus,
+  };
+
+  res.json({ success: true, message: `Payment status updated to ${paymentStatus}`, order: orderResponse });
+});
 
 // GET /api/admin/products
 // Admin can see ALL products from ALL sellers with clear seller badges and approval statuses
