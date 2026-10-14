@@ -5,6 +5,7 @@ import { AdminMessagesTab } from '../components/admin/AdminMessagesTab.js';
 import { AdminTeamTab } from '../components/admin/AdminTeamTab.js';
 import { AdminOrdersManager } from '../components/admin/AdminOrdersManager.js';
 import { AdminSellersTab } from '../components/admin/AdminSellersTab.js';
+import { ErrorBoundary } from '../components/common/ErrorBoundary.js';
 import {
   ShieldCheck,
   Plus,
@@ -263,6 +264,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
 
+  // Keep settings state synchronized when settings prop updates from server
+  useEffect(() => {
+    if (settings) {
+      if (settings.introVideoUrl) setEditIntroVideoUrl(settings.introVideoUrl);
+      if (settings.introVideoTitle) setEditIntroVideoTitle(settings.introVideoTitle);
+      if (settings.introVideoDescription) setEditIntroVideoDescription(settings.introVideoDescription);
+      if (typeof settings.introVideoEnabled === 'boolean') setEditIntroVideoEnabled(settings.introVideoEnabled);
+      if (settings.brandName) setEditBrandName(settings.brandName);
+      if (settings.domain) setEditDomain(settings.domain);
+      if (settings.tagline) setEditTagline(settings.tagline);
+      if (settings.secondarySlogan) setEditSlogan(settings.secondarySlogan);
+      if (settings.email) setEditEmail(settings.email);
+      if (settings.adminNotificationEmail) setEditAdminEmail(settings.adminNotificationEmail);
+      if (settings.instagram) setEditInstagram(settings.instagram);
+      if (settings.facebook) setEditFacebook(settings.facebook);
+      if (settings.youtube) setEditYoutube(settings.youtube);
+      if (Array.isArray(settings.announcementMessages)) setEditAnnouncements(settings.announcementMessages.join('\n'));
+    }
+  }, [settings]);
+
   const showSuccess = (msg: string) => {
     setActionSuccessMsg(msg);
     setTimeout(() => setActionSuccessMsg(null), 3500);
@@ -442,7 +463,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         const data = await res.json();
         if (res.ok && data.url) {
           setEditIntroVideoUrl(data.url);
-          showSuccess('Intro video uploaded successfully! Click Save Settings to persist.');
+          // Auto-persist immediately to settings so it stays constant and permanent
+          await onUpdateSettings({
+            ...settings,
+            introVideoUrl: data.url,
+            introVideoTitle: editIntroVideoTitle.trim() || 'ZIPROO ATELIER · 2026 BRAND INTRO FILM',
+            introVideoDescription: editIntroVideoDescription.trim(),
+            introVideoEnabled: true,
+          });
+
+          // Also register in introVideos collection for redundancy
+          try {
+            await fetch('/api/admin/intro-videos', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                title: editIntroVideoTitle.trim() || file.name,
+                videoUrl: data.url,
+                description: editIntroVideoDescription.trim(),
+                isActive: true,
+              }),
+            });
+          } catch {
+            // Secondary registration non-blocking
+          }
+
+          showSuccess('Intro video uploaded and saved permanently!');
         } else {
           alert('Upload failed: ' + (data.error || 'Unknown error'));
         }
@@ -921,6 +970,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Dashboard Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-zinc-200 scrollbar-none">
           <button
+            type="button"
             onClick={() => setActiveTab('products')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'products'
@@ -933,6 +983,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('updates')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'updates'
@@ -945,6 +996,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('orders')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'orders'
@@ -958,6 +1010,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* Multi-Seller Platform: Seller Management (PART 8) */}
           <button
+            type="button"
             onClick={() => setActiveTab('sellers')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'sellers'
@@ -971,6 +1024,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* User Requirement: Customer particulars registered in one page visible to admin only */}
           <button
+            type="button"
             onClick={() => setActiveTab('customers')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'customers'
@@ -984,6 +1038,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* User Requirement: Customer messages to atelier in one separate page seen by admin only */}
           <button
+            type="button"
             onClick={() => setActiveTab('messages')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'messages'
@@ -997,6 +1052,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* User Requirement: Creating new admin for website that can be created by admin1 only */}
           <button
+            type="button"
             onClick={() => setActiveTab('team')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'team'
@@ -1010,6 +1066,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {/* User Requirement: Online Amount Receiving Portal for Admin Only */}
           <button
+            type="button"
             onClick={() => setActiveTab('portal')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'portal'
@@ -1022,6 +1079,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'settings'
@@ -1034,6 +1092,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
               activeTab === 'security'
@@ -1417,7 +1476,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* ================= TAB: ADMIN TEAM CREATION (ADMIN 1 ONLY) ================= */}
         {activeTab === 'team' && (
-          <AdminTeamTab currentAdmin={adminUser} token={token} />
+          <ErrorBoundary fallbackTitle="Admin Team Management">
+            <AdminTeamTab currentAdmin={adminUser} token={token} />
+          </ErrorBoundary>
         )}
 
         {/* ================= TAB 4: ONLINE AMOUNT RECEIVING PORTAL (ADMIN ONLY) ================= */}

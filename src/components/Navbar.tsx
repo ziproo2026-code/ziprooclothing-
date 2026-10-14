@@ -191,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Admin Entrance */}
             <button
               onClick={onOpenAdmin}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all shadow-xs ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-medium rounded-lg border transition-all shadow-xs ${
                 adminUser
                   ? 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'
                   : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:text-zinc-950 hover:border-zinc-300'
@@ -199,22 +199,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               title={adminUser ? `Signed in as ${adminUser.username}` : 'Admin Portal'}
             >
               <ShieldCheck className={`w-3.5 h-3.5 ${adminUser ? 'text-[#7c3aed]' : 'text-zinc-500'}`} />
-              <span className="hidden md:inline font-mono">
+              <span className="hidden xl:inline font-mono">
                 {adminUser ? 'Admin Portal' : 'Admin'}
               </span>
             </button>
 
-            {/* Monogram Logo in Top Right Corner */}
-            <ZMonogramLogo
-              size="sm"
-              onClick={() => handleNavClick('home')}
-              className="cursor-pointer ml-1"
-            />
+            {/* Monogram Logo: Pushed slightly left with adequate padding and placed before mobile toggle so it never gets clipped or hidden on tablets */}
+            <div className="flex items-center pl-1 sm:pl-2 pr-0.5">
+              <ZMonogramLogo
+                size="sm"
+                onClick={() => handleNavClick('home')}
+                className="cursor-pointer transition-transform hover:scale-105 active:scale-95 drop-shadow-xs"
+              />
+            </div>
 
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-zinc-700 hover:text-zinc-950 rounded-lg focus:outline-none"
+              className="lg:hidden p-2 text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg focus:outline-none transition-colors"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

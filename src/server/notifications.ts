@@ -11,8 +11,23 @@ export function getBrevoApiKey(): string {
   const direct = (process.env.BREVO_API_KEY || '').trim();
   if (direct && !direct.includes('YOUR_BREVO_API_KEY')) return direct;
 
-  // Also support user naming secrets 'email' or 'ziproo' in Secrets panel
-  for (const k of ['BREVO_API_KEY', 'brevo_api_key', 'email', 'ziproo']) {
+  // Check aliases in process.env: ziproo, email, ziprooemail, brevo, brevo_api_key
+  const candidates = [
+    'BREVO_API_KEY',
+    'brevo_api_key',
+    'BREVO_KEY',
+    'brevo_key',
+    'ziproo',
+    'ZIPROO',
+    'email',
+    'EMAIL',
+    'ziprooemail',
+    'ZIPROOEMAIL',
+    'brevo',
+    'BREVO',
+  ];
+
+  for (const k of candidates) {
     const val = process.env[k];
     if (val && typeof val === 'string' && val.startsWith('xkeysib-')) {
       return val.trim();
@@ -24,22 +39,136 @@ export function getBrevoApiKey(): string {
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_FROM_EMAIL || 'ziproo2026@gmail.com';
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'ZIPROO Atelier';
 
-// SMTP FALLBACK CONFIGURATION
-const SMTP_HOST = process.env.SMTP_HOST;
+// SMTP CONFIGURATION HELPER
+// Automatically detects Brevo SMTP Relay credentials when xsmtpsib- key is provided in secrets
+export function getSmtpConfig() {
+  // Check if ziprooemail or other secret contains Brevo SMTP key
+  const candidates = ['ziprooemail', 'ZIPROOEMAIL', 'SMTP_PASS', 'smtp_pass', 'BREVO_SMTP_KEY', 'brevo_smtp_key'];
+  let pass = (process.env.SMTP_PASS || '').trim();
+  for (const k of candidates) {
+    const val = process.env[k];
+    if (val && typeof val === 'string' && val.trim().startsWith('xsmtpsib-')) {
+      pass = val.trim();
+      break;
+    }
+  }
+
+  const isBrevoSmtp = Boolean(pass && pass.startsWith('xsmtpsib-'));
+  const host = process.env.SMTP_HOST || (isBrevoSmtp ? 'smtp-relay.brevo.com' : undefined);
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure = process.env.SMTP_SECURE === 'true';
+  const user = process.env.SMTP_USER || (isBrevoSmtp ? 'bc3413001@smtp-brevo.com' : undefined);
+  const fromName = process.env.SMTP_FROM_NAME || 'ZIPROO Atelier';
+  const fromEmail = process.env.SMTP_FROM_EMAIL || (isBrevoSmtp ? 'ziproo2026@gmail.com' : user) || 'ziproo2026@gmail.com';
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    fromName,
+    fromEmail,
+    isAvailable: Boolean(host && user && pass),
+    providerName: isBrevoSmtp ? 'Brevo SMTP Relay' : 'Custom SMTP Server',
+  };
+}
+
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'ZIPROO Atelier';
+const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || 'ziproo2026@gmail.com';
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp-relay.brevo.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'ZIPROO Atelier';
-const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || SMTP_USER || 'orders@ziproofashion.com';
+const SMTP_USER = process.env.SMTP_USER || 'bc3413001@smtp-brevo.com';
+const SMTP_PASS = process.env.SMTP_PASS || '';
 
-// MSG91 Indian DLT-Approved SMS Gateway Configuration Helper
-// Reads securely from server environment variable MSG91_AUTH_KEY on every invocation
-export function getMsg91Config() {
-  // 1. Direct environment variable lookup: MSG91_AUTH_KEY
+/**
+ * Configure Nodemailer transport if SMTP credentials are provided
+ */
+export function createTransporter() {
+  const config = getSmtpConfig();
+  if (config.isAvailable && config.host && config.user && config.pass) {
+    return nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
+    });
+  }
+  return null;
+}
+
+// MSG91 & TEXTBEE SMS GATEWAY CONFIGURATION HELPER
+// Reads securely from server environment variable zipsms, ziproosmsa, TXT_BEE_API_KEY, or MSG91_AUTH_KEY
+export interface SmsGatewayConfig {
+  provider: 'textbee' | 'msg91' | 'generic' | 'none';
+  authKey: string;
+  templateId: string;
+  senderId: string;
+  isAvailable: boolean;
+  providerName: string;
+  deviceId?: string;
+  deviceModel?: string;
+}
+
+export function getSmsGatewayConfig(): SmsGatewayConfig {
+  // 1. Check for Textbee API key (starts with 'txb_' or stored in zipsms / ziproosmsa / TXT_BEE_API_KEY)
+  const textbeeCandidateKeys = [
+    'zipsms',
+    'ZIPSMS',
+    'ziproosmsa',
+    'ZIPROOSMSA',
+    'TXT_BEE_API_KEY',
+    'txt_bee_api_key',
+    'TXTBEE_API_KEY',
+    'txtbee_api_key',
+    'TEXTBEE_API_KEY',
+    'textbee_api_key',
+    'TEXTBEE_KEY',
+    'textbee_key',
+    'TEXTBEE',
+    'textbee',
+  ];
+
+  for (const k of textbeeCandidateKeys) {
+    const val = (process.env[k] || '').trim();
+    if (val && !val.includes('YOUR_') && val !== 'undefined' && val !== 'null') {
+      const deviceId = (process.env.TEXTBEE_DEVICE_ID || process.env.zipsms_device_id || '').trim();
+      return {
+        provider: 'textbee',
+        authKey: val,
+        templateId: '',
+        senderId: 'ZIPROO',
+        isAvailable: true,
+        providerName: 'Textbee Gateway (vivo V2312)',
+        deviceId: deviceId || undefined,
+      };
+    }
+  }
+
+  // Also check if any key in process.env starts with txb_
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === 'string' && v.trim().startsWith('txb_')) {
+      const deviceId = (process.env.TEXTBEE_DEVICE_ID || process.env.zipsms_device_id || '').trim();
+      return {
+        provider: 'textbee',
+        authKey: v.trim(),
+        templateId: '',
+        senderId: 'ZIPROO',
+        isAvailable: true,
+        providerName: 'Textbee Gateway (vivo V2312)',
+        deviceId: deviceId || undefined,
+      };
+    }
+  }
+
+  // 2. Direct environment variable lookup: MSG91_AUTH_KEY
   let authKey = (process.env.MSG91_AUTH_KEY || '').trim();
 
-  // 2. Check case-insensitive aliases in process.env
+  // Check case-insensitive aliases in process.env
   if (!authKey) {
     const candidateKeys = [
       'msg91_auth_key',
@@ -54,6 +183,8 @@ export function getMsg91Config() {
       'MSG_91_AUTH_KEY',
       'msg_91_auth_key',
       'AUTH_KEY',
+      'SMS_KEY',
+      'sms_key',
     ];
     for (const key of candidateKeys) {
       const val = process.env[key];
@@ -64,7 +195,7 @@ export function getMsg91Config() {
     }
   }
 
-  // 3. Normalize quotes if present
+  // Normalize quotes if present
   if (authKey.startsWith('"') && authKey.endsWith('"')) {
     authKey = authKey.slice(1, -1).trim();
   } else if (authKey.startsWith("'") && authKey.endsWith("'")) {
@@ -93,16 +224,31 @@ export function getMsg91Config() {
   const isAvailable = Boolean(
     authKey &&
     authKey.length > 0 &&
-    !authKey.includes('YOUR_MSG91_AUTH_KEY') &&
+    !authKey.includes('YOUR_') &&
     authKey !== 'undefined' &&
     authKey !== 'null'
   );
 
   return {
+    provider: isAvailable ? 'msg91' : 'none',
     authKey,
     templateId,
     senderId,
     isAvailable,
+    providerName: isAvailable ? 'MSG91 DLT Gateway' : 'None',
+  };
+}
+
+// Backward compatibility alias for existing callers
+export function getMsg91Config() {
+  const config = getSmsGatewayConfig();
+  return {
+    authKey: config.authKey,
+    templateId: config.templateId,
+    senderId: config.senderId,
+    isAvailable: config.isAvailable,
+    provider: config.provider,
+    providerName: config.providerName,
   };
 }
 
@@ -113,24 +259,6 @@ const SMS_SENDER_ID = process.env.SMS_SENDER_ID || 'ZIPROO';
 
 // Active in-flight email locks to prevent duplicate concurrent dispatches
 const inFlightEmailLocks = new Set<string>();
-
-/**
- * Configure Nodemailer transport if SMTP credentials are provided
- */
-function createTransporter() {
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
-  }
-  return null;
-}
 
 export type EmailEvent =
   | 'order_confirmed'
@@ -296,51 +424,92 @@ export async function sendBrevoEmail(
 
 /**
  * Test utility for Brevo transactional email integration
+ * Supports both Brevo REST API v3 and Brevo SMTP Relay (xsmtpsib- key)
  */
 export async function testBrevoEmailIntegration(
   toEmail = 'ziproo2026@gmail.com'
-): Promise<{ success: boolean; message: string; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; message: string; messageId?: string; error?: string; provider?: string }> {
   const apiKey = getBrevoApiKey();
-  if (!apiKey) {
+  const smtpConfig = getSmtpConfig();
+
+  if (!apiKey && !smtpConfig.isAvailable) {
     return {
       success: false,
-      message: 'BREVO_API_KEY is not configured in server environment',
-      error: 'Missing BREVO_API_KEY secret',
+      message: 'No email secret found in server environment (configured via "ziprooemail" or "BREVO_API_KEY")',
+      error: 'Missing BREVO_API_KEY or SMTP secret',
     };
   }
 
-  const result = await sendBrevoEmail({
-    toEmail,
-    toName: 'ZIPROO Admin Test',
-    subject: `[ZIPROO TEST] Brevo Transactional Email Integration Test · ${new Date().toLocaleTimeString('en-IN')}`,
-    textContent: `ZIPROO Brevo Transactional Email Integration is active and verified.\nTimestamp: ${new Date().toISOString()}\nRecipient: ${toEmail}`,
-    htmlContent: `
-      <div style="font-family: sans-serif; padding: 24px; background: #09090b; color: #ffffff; border-radius: 12px; max-width: 500px; margin: 0 auto; border: 1px solid #7c3aed;">
-        <h1 style="color: #ffffff; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 8px;">ZIPROO ATELIER</h1>
-        <p style="color: #a855f7; font-size: 11px; font-weight: bold; letter-spacing: 1.5px; margin: 0 0 16px;">BREVO TRANSACTIONAL EMAIL VERIFICATION</p>
-        <div style="background: #18181b; padding: 14px; border-radius: 8px; border: 1px solid #27272a; font-size: 13px; line-height: 1.6;">
-          <p style="margin: 0 0 8px; color: #10b981; font-weight: bold;">✔ Brevo API Key connected and transmitting successfully!</p>
-          <p style="margin: 0; color: #a1a1aa; font-size: 11px;">Timestamp: ${new Date().toISOString()}</p>
-          <p style="margin: 4px 0 0; color: #a1a1aa; font-size: 11px;">Recipient: ${toEmail}</p>
-        </div>
-        <p style="font-size: 11px; color: #71717a; margin-top: 16px; text-align: center;">CREATE YOUR IDENTITY · EST. 2026</p>
+  const subject = `[ZIPROO TEST] Email Gateway Integration Verified · ${new Date().toLocaleTimeString('en-IN')}`;
+  const htmlContent = `
+    <div style="font-family: sans-serif; padding: 24px; background: #09090b; color: #ffffff; border-radius: 12px; max-width: 500px; margin: 0 auto; border: 1px solid #7c3aed;">
+      <h1 style="color: #ffffff; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 8px;">ZIPROO ATELIER</h1>
+      <p style="color: #a855f7; font-size: 11px; font-weight: bold; letter-spacing: 1.5px; margin: 0 0 16px;">EMAIL NOTIFICATION GATEWAY VERIFICATION</p>
+      <div style="background: #18181b; padding: 14px; border-radius: 8px; border: 1px solid #27272a; font-size: 13px; line-height: 1.6;">
+        <p style="margin: 0 0 8px; color: #10b981; font-weight: bold;">✔ Email Key authenticated and transmitting successfully!</p>
+        <p style="margin: 0; color: #a1a1aa; font-size: 11px;">Timestamp: ${new Date().toISOString()}</p>
+        <p style="margin: 4px 0 0; color: #a1a1aa; font-size: 11px;">Recipient: ${toEmail}</p>
+        <p style="margin: 4px 0 0; color: #a1a1aa; font-size: 11px;">Provider: ${apiKey ? 'Brevo REST API v3' : smtpConfig.providerName}</p>
       </div>
-    `,
-  });
+      <p style="font-size: 11px; color: #71717a; margin-top: 16px; text-align: center;">CREATE YOUR IDENTITY · EST. 2026</p>
+    </div>
+  `;
+  const textContent = `ZIPROO Email Gateway is active and verified.\nTimestamp: ${new Date().toISOString()}\nRecipient: ${toEmail}`;
 
-  if (result.success) {
-    return {
-      success: true,
-      message: `Test email successfully dispatched via Brevo! MessageId: ${result.messageId}`,
-      messageId: result.messageId,
-    };
-  } else {
-    return {
-      success: false,
-      message: `Brevo test dispatch failed: ${result.error}`,
-      error: result.error,
-    };
+  // 1. Try Brevo REST API v3 if API key available
+  if (apiKey) {
+    const result = await sendBrevoEmail({
+      toEmail,
+      toName: 'ZIPROO Admin Test',
+      subject,
+      textContent,
+      htmlContent,
+    });
+
+    if (result.success) {
+      return {
+        success: true,
+        message: `Test email successfully dispatched via Brevo REST API! MessageId: ${result.messageId}`,
+        messageId: result.messageId,
+        provider: 'Brevo REST API',
+      };
+    }
   }
+
+  // 2. Fall back to SMTP Relay (e.g. Brevo SMTP relay with xsmtpsib- key)
+  const transporter = createTransporter();
+  if (transporter && smtpConfig.fromEmail) {
+    try {
+      const info = await transporter.sendMail({
+        from: `"${smtpConfig.fromName}" <${smtpConfig.fromEmail}>`,
+        to: toEmail,
+        subject,
+        text: textContent,
+        html: htmlContent,
+      });
+
+      console.log(`[ZIPROO TEST EMAIL SMTP SUCCESS] Sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return {
+        success: true,
+        message: `Test email successfully dispatched via ${smtpConfig.providerName}! MessageId: ${info.messageId}`,
+        messageId: info.messageId,
+        provider: smtpConfig.providerName,
+      };
+    } catch (err: any) {
+      console.error('[ZIPROO TEST EMAIL SMTP ERROR]', err);
+      return {
+        success: false,
+        message: `${smtpConfig.providerName} test dispatch failed: ${err.message || String(err)}`,
+        error: err.message || String(err),
+      };
+    }
+  }
+
+  return {
+    success: false,
+    message: 'Failed to dispatch email test through both REST API and SMTP',
+    error: 'No active email transport available',
+  };
 }
 
 /**
@@ -917,6 +1086,113 @@ ZIPROO 2026 Atelier Systems
  * Send order confirmation SMS to customer's registered mobile number
  * Reads MSG91_AUTH_KEY dynamically from server environment and validates presence
  */
+/**
+ * Helper to dispatch SMS via Textbee Gateway (https://api.textbee.dev)
+ */
+async function sendTextbeeSms(params: {
+  apiKey: string;
+  recipients: string[];
+  message: string;
+  deviceId?: string;
+}): Promise<{ success: boolean; message: string; error?: string; responseData?: any }> {
+  const { apiKey, recipients, message, deviceId } = params;
+
+  // Normalize phone numbers to E.164 format (+91...)
+  const formattedRecipients = recipients.map((r) => {
+    const clean = r.replace(/[^0-9]/g, '');
+    if (clean.startsWith('91') && clean.length === 12) return `+${clean}`;
+    if (clean.length === 10) return `+91${clean}`;
+    return clean.startsWith('+') ? clean : `+${clean}`;
+  });
+
+  // If no deviceId was explicitly passed, query /api/v1/gateway/devices to discover active device
+  let targetDeviceId = deviceId;
+  if (!targetDeviceId) {
+    try {
+      const devRes = await fetch('https://api.textbee.dev/api/v1/gateway/devices', {
+        method: 'GET',
+        headers: { 'x-api-key': apiKey },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (devRes.ok) {
+        const devData = await devRes.json();
+        const devices = devData?.data || devData?.devices || [];
+        if (Array.isArray(devices) && devices.length > 0) {
+          const enabledDev = devices.find((d: any) => d.enabled !== false && d.status !== 'disabled');
+          targetDeviceId = (enabledDev || devices[0])?.id || (enabledDev || devices[0])?._id;
+        }
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
+  const endpoint = targetDeviceId
+    ? `https://api.textbee.dev/api/v1/gateway/devices/${targetDeviceId}/send-sms`
+    : `https://api.textbee.dev/api/v1/gateway/send-sms`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipients: formattedRecipients,
+        message,
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    const text = await res.text();
+    let json: any = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // Non-json
+    }
+
+    if (res.ok && (!json || json.success !== false)) {
+      console.log(`[ZIPROO TEXTBEE SMS SUCCESS] Sent to ${formattedRecipients.join(', ')}:`, text);
+      return {
+        success: true,
+        message: `SMS dispatched via Textbee to ${formattedRecipients.join(', ')}`,
+        responseData: json || text,
+      };
+    } else {
+      const errorMsg = json?.error || json?.message || text || `Textbee HTTP ${res.status}`;
+      console.warn(`[ZIPROO TEXTBEE SMS WARNING] Textbee responded:`, errorMsg);
+
+      // Provide clear guidance if no Android phone is linked yet or email verification needed
+      let friendlyError = errorMsg;
+      if (errorMsg.includes('Please verify your email')) {
+        friendlyError = `Textbee API key authenticated successfully! Your vivo V2312 device is connected, but Textbee requires you to verify your email address. Please click the verification link sent by Textbee to your email to activate outbound SMS.`;
+      } else if (errorMsg.includes('No enabled device found') || errorMsg.includes('Invalid device id')) {
+        friendlyError = `Textbee API key authenticated successfully! To send messages, install the Textbee app on your Android phone, log in with the same account, and enable "Gateway Enabled" in settings.`;
+      }
+
+      return {
+        success: false,
+        message: friendlyError,
+        error: friendlyError,
+        responseData: json,
+      };
+    }
+  } catch (err: any) {
+    console.error(`[ZIPROO TEXTBEE NETWORK ERROR]`, err);
+    return {
+      success: false,
+      message: `Failed to connect to Textbee SMS gateway: ${err.message || String(err)}`,
+      error: err.message || String(err),
+    };
+  }
+}
+
+/**
+ * Send order confirmation SMS to customer's registered mobile number
+ * Automatically checks Textbee (via zipsms secret) and MSG91
+ */
 export async function sendCustomerOrderSms(
   order: Order
 ): Promise<{ success: boolean; message: string; smsContent: string; error?: string }> {
@@ -924,12 +1200,12 @@ export async function sendCustomerOrderSms(
   const smsContent = `Hi ${order.customerName}! Thank you for ordering from ZIPROO. Your order #${order.orderNumber} (Items: ${productSummary}, Total: ₹${order.totalAmount.toLocaleString('en-IN')}) has been received successfully. We'll keep you updated on shipping. Thank you for choosing ZIPROO!`;
 
   const cleanMobile = order.mobileNumber.replace(/[^0-9]/g, '');
-  const { authKey, templateId, senderId, isAvailable } = getMsg91Config();
+  const config = getSmsGatewayConfig();
 
   // Validate API key presence
-  if (!isAvailable) {
-    const errorMsg = 'Missing API key: MSG91_AUTH_KEY is unavailable in server-side environment secrets';
-    console.error(`[ZIPROO MSG91 CONFIG ERROR] ${errorMsg}`);
+  if (!config.isAvailable) {
+    const errorMsg = 'Missing API key: SMS API key (zipsms / MSG91_AUTH_KEY) is unavailable in server-side environment secrets';
+    console.error(`[ZIPROO SMS CONFIG ERROR] ${errorMsg}`);
     return {
       success: false,
       message: errorMsg,
@@ -938,14 +1214,31 @@ export async function sendCustomerOrderSms(
     };
   }
 
-  // Format mobile number with country code for Indian telecommunications (91 prefix)
+  // 1. Textbee Provider (from zipsms secret or textbee API key)
+  if (config.provider === 'textbee') {
+    const tbRes = await sendTextbeeSms({
+      apiKey: config.authKey,
+      recipients: [order.mobileNumber],
+      message: smsContent,
+      deviceId: config.deviceId,
+    });
+    return {
+      success: tbRes.success,
+      message: tbRes.message,
+      smsContent,
+      error: tbRes.error,
+    };
+  }
+
+  // 2. MSG91 Provider
+  const { authKey, templateId, senderId } = config;
   const formattedMobile = cleanMobile.startsWith('91') && cleanMobile.length === 12
     ? cleanMobile
     : cleanMobile.length === 10
     ? `91${cleanMobile}`
     : cleanMobile;
 
-  // 1. PRIMARY: MSG91 Flow API (DLT-Approved Template)
+  // MSG91 Flow API (DLT-Approved Template)
   if (templateId) {
     try {
       const msg91Payload = {
@@ -975,7 +1268,6 @@ export async function sendCustomerOrderSms(
         ],
       };
 
-      // Supply authkey both in header and query string to prevent proxy/WAF strip issues
       const flowUrl = `https://control.msg91.com/api/v5/flow/?authkey=${encodeURIComponent(authKey)}`;
       const res = await fetch(flowUrl, {
         method: 'POST',
@@ -1024,7 +1316,7 @@ export async function sendCustomerOrderSms(
     }
   }
 
-  // 2. MSG91 Standard SendSMS API (when templateId is not set)
+  // MSG91 Standard SendSMS API (when templateId is not set)
   try {
     const v2Url = `https://api.msg91.com/api/v2/sendsms?authkey=${encodeURIComponent(authKey)}`;
     const res = await fetch(v2Url, {
@@ -1094,16 +1386,28 @@ export async function sendCustomerStatusUpdateSms(
 ): Promise<{ success: boolean; message: string; error?: string }> {
   const smsContent = `ZIPROO Update: Order #${order.orderNumber} status changed to "${newStatus}". ${note ? `Note: ${note}. ` : ''}Track live on: https://ziproofashion.com/track`;
   const cleanMobile = order.mobileNumber.replace(/[^0-9]/g, '');
-  const { authKey, templateId, senderId, isAvailable } = getMsg91Config();
+  const config = getSmsGatewayConfig();
 
-  if (!isAvailable) {
+  if (!config.isAvailable) {
     return {
       success: false,
-      message: 'Missing API key: MSG91_AUTH_KEY is unavailable in server-side environment secrets',
-      error: 'Missing API key: MSG91_AUTH_KEY is unavailable',
+      message: 'Missing API key: SMS API key is unavailable in server-side environment secrets',
+      error: 'Missing API key: SMS API key is unavailable',
     };
   }
 
+  // 1. Textbee Provider
+  if (config.provider === 'textbee') {
+    return sendTextbeeSms({
+      apiKey: config.authKey,
+      recipients: [order.mobileNumber],
+      message: smsContent,
+      deviceId: config.deviceId,
+    });
+  }
+
+  // 2. MSG91 Provider
+  const { authKey, templateId, senderId } = config;
   const formattedMobile = cleanMobile.startsWith('91') && cleanMobile.length === 12
     ? cleanMobile
     : cleanMobile.length === 10
@@ -1191,22 +1495,42 @@ export async function sendCustomerStatusUpdateSms(
 }
 
 /**
- * Test utility for MSG91 SMS Gateway
- * Accurately validates authentication with MSG91 and tests SMS delivery
+ * Universal Test utility for SMS Gateway (Textbee / MSG91)
+ * Accurately validates authentication with the active SMS gateway and tests SMS delivery
  */
 export async function testMsg91SmsIntegration(
   mobileNumber = '9876543210'
-): Promise<{ success: boolean; message: string; error?: string }> {
-  const { authKey, templateId, isAvailable } = getMsg91Config();
-  if (!isAvailable) {
+): Promise<{ success: boolean; message: string; provider?: string; error?: string; rawResponse?: any }> {
+  const config = getSmsGatewayConfig();
+  if (!config.isAvailable) {
     return {
       success: false,
-      message: 'Missing API key: MSG91_AUTH_KEY is not configured in server environment secrets',
-      error: 'Missing API key: MSG91_AUTH_KEY is unavailable in server-side environment secrets. Please configure the secret MSG91_AUTH_KEY in your AI Studio Secrets panel or server environment.',
+      message: 'Missing API key: No SMS secret configured (zipsms / MSG91_AUTH_KEY)',
+      error: 'Missing API key: No SMS secret configured in server-side environment secrets. Please configure "zipsms" or "MSG91_AUTH_KEY" in the Secrets panel.',
     };
   }
 
-  // 1. If template is provided, test Flow API
+  // 1. Textbee Test
+  if (config.provider === 'textbee') {
+    const testMessage = `ZIPROO Atelier SMS Test: Connection established successfully via Textbee API! Timestamp: ${new Date().toLocaleTimeString('en-IN')}`;
+    const result = await sendTextbeeSms({
+      apiKey: config.authKey,
+      recipients: [mobileNumber],
+      message: testMessage,
+      deviceId: config.deviceId,
+    });
+
+    return {
+      success: result.success,
+      message: result.message,
+      provider: 'Textbee',
+      error: result.error,
+      rawResponse: result.responseData,
+    };
+  }
+
+  // 2. MSG91 Test
+  const { authKey, templateId } = config;
   if (templateId) {
     const dummyOrder: Order = {
       id: `test_${Date.now()}`,
@@ -1248,11 +1572,12 @@ export async function testMsg91SmsIntegration(
     return {
       success: result.success,
       message: result.message,
+      provider: 'MSG91',
       error: result.error,
     };
   }
 
-  // 2. If templateId is not set, validate authKey against MSG91 authentication endpoint
+  // If templateId is not set, validate authKey against MSG91 balance endpoint
   try {
     const checkUrl = `https://api.msg91.com/api/balance.php?authkey=${encodeURIComponent(authKey)}&type=4`;
     const res = await fetch(checkUrl, {
@@ -1270,13 +1595,13 @@ export async function testMsg91SmsIntegration(
       // Non-json
     }
 
-    // MSG91 returns {"msg":"201","msgType":"error"} for invalid authkey
     if (json?.msgType === 'error' && (json?.msg === '201' || json?.message?.includes('auth') || json?.message?.includes('Invalid'))) {
       const err = `MSG91 authentication rejected: Invalid API key (MSG91 Error ${json.msg || '201'}). Please verify MSG91_AUTH_KEY in your MSG91 dashboard.`;
       console.error(`[ZIPROO MSG91 AUTH ERROR] ${err}`);
       return {
         success: false,
         message: err,
+        provider: 'MSG91',
         error: err,
       };
     }
@@ -1321,12 +1646,14 @@ export async function testMsg91SmsIntegration(
     return {
       success: sendRes.success,
       message: sendRes.message,
+      provider: 'MSG91',
       error: sendRes.error,
     };
   } catch (err: any) {
     return {
       success: false,
       message: `Failed to connect to MSG91 gateway: ${err.message || String(err)}`,
+      provider: 'MSG91',
       error: err.message || String(err),
     };
   }

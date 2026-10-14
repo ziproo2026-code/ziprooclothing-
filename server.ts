@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { loadDatabase, saveDatabase } from './src/server/storage.js';
-import { verifyPassword, generateToken, verifyToken, hashPassword } from './src/server/auth.js';
+import { verifyPassword, generateToken, verifyToken, hashPassword, type StoredAdmin } from './src/server/auth.js';
 import {
   sendAdminOrderEmail,
   sendCustomerOrderSms,
@@ -14,6 +14,9 @@ import {
   testBrevoEmailIntegration,
   testMsg91SmsIntegration,
   getMsg91Config,
+  getSmsGatewayConfig,
+  getBrevoApiKey,
+  getSmtpConfig,
   type EmailEvent,
 } from './src/server/notifications.js';
 import type {
@@ -1320,32 +1323,38 @@ app.post('/api/admin/test-brevo-email', requireAdmin, async (req: AuthenticatedR
   res.json(result);
 });
 
-// GET /api/admin/brevo-status (Admin only - Checks if Brevo API key is loaded server-side)
+// GET /api/admin/brevo-status (Admin only - Checks if Brevo API key or SMTP Relay is loaded server-side)
 app.get('/api/admin/brevo-status', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
-  const hasKey = Boolean(process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim().length > 0);
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'ziproo2026@gmail.com';
+  const brevoApiKey = getBrevoApiKey();
+  const smtpConfig = getSmtpConfig();
+  const hasKey = Boolean(brevoApiKey || smtpConfig.isAvailable);
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || smtpConfig.fromEmail || 'ziproo2026@gmail.com';
   res.json({
     configured: hasKey,
+    provider: brevoApiKey ? 'Brevo REST API' : smtpConfig.providerName,
     senderEmail,
     adminNotificationEmail: 'ziproo2026@gmail.com',
   });
 });
 
-// POST /api/admin/test-msg91-sms (Admin only - Tests MSG91 SMS gateway integration)
-app.post('/api/admin/test-msg91-sms', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+// POST /api/admin/test-msg91-sms and POST /api/admin/test-sms (Admin only - Tests active SMS gateway integration)
+app.post(['/api/admin/test-msg91-sms', '/api/admin/test-sms'], requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   const { mobileNumber } = req.body;
   const targetMobile = (mobileNumber && String(mobileNumber).trim()) || '9876543210';
   const result = await testMsg91SmsIntegration(targetMobile);
   res.json(result);
 });
 
-// GET /api/admin/msg91-status (Admin only - Checks if MSG91 API key is loaded server-side)
-app.get('/api/admin/msg91-status', requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
-  const { isAvailable, templateId, senderId } = getMsg91Config();
+// GET /api/admin/msg91-status and GET /api/admin/sms-status (Admin only - Checks if SMS API key is loaded server-side)
+app.get(['/api/admin/msg91-status', '/api/admin/sms-status'], requireAdmin, (_req: AuthenticatedRequest, res: Response) => {
+  const config = getSmsGatewayConfig();
   res.json({
-    configured: isAvailable,
-    templateConfigured: Boolean(templateId),
-    senderId,
+    configured: config.isAvailable,
+    provider: config.provider,
+    providerName: config.providerName,
+    templateConfigured: Boolean(config.templateId),
+    senderId: config.senderId,
+    deviceIdConfigured: Boolean(config.deviceId),
   });
 });
 

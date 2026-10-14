@@ -2,6 +2,7 @@ import React from 'react';
 
 interface MovingSloganBarProps {
   className?: string;
+  messages?: string[];
 }
 
 const DEFAULT_SLOGANS = [
@@ -11,15 +12,16 @@ const DEFAULT_SLOGANS = [
   'DEFINE YOUR OWN STYLE',
 ];
 
-export const MovingSloganBar: React.FC<MovingSloganBarProps> = ({ className = '' }) => {
+export const MovingSloganBar: React.FC<MovingSloganBarProps> = ({ className = '', messages }) => {
+  const baseSlogans = messages && messages.length > 0 ? messages : DEFAULT_SLOGANS;
   // Multiply the slogans list to ensure continuous looping with zero gaps on any screen size (up to 4K)
   const repeatedSlogans = [
-    ...DEFAULT_SLOGANS,
-    ...DEFAULT_SLOGANS,
-    ...DEFAULT_SLOGANS,
-    ...DEFAULT_SLOGANS,
-    ...DEFAULT_SLOGANS,
-    ...DEFAULT_SLOGANS,
+    ...baseSlogans,
+    ...baseSlogans,
+    ...baseSlogans,
+    ...baseSlogans,
+    ...baseSlogans,
+    ...baseSlogans,
   ];
 
   return (

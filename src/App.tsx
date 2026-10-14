@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Product, CompanyUpdate, StoreSettings, CartItem, Order, AdminUser, Customer } from './types/index.js';
-import { AnnouncementBar } from './components/AnnouncementBar.js';
+import { MovingSloganBar } from './components/MovingSloganBar.js';
 import { Navbar } from './components/Navbar.js';
 import { Footer } from './components/Footer.js';
 import { HomePage } from './pages/HomePage.js';
@@ -18,7 +18,6 @@ import { SizePromptModal } from './components/SizePromptModal.js';
 import { CustomerAuthModal } from './components/CustomerAuthModal.js';
 import { TrackOrderModal } from './components/TrackOrderModal.js';
 import { ProductDetailsModal } from './components/ProductDetailsModal.js';
-import { MovingSloganBar } from './components/MovingSloganBar.js';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>(() => {
@@ -453,10 +452,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-zinc-900 flex flex-col font-sans selection:bg-purple-200 selection:text-purple-900">
-      {/* 1. CONTINUOUSLY MOVING ANNOUNCEMENT BAR */}
-      <AnnouncementBar messages={settings.announcementMessages} />
-
-      {/* 2. TOP BAR CONTRACT */}
+      {/* 1. TOP HEADER NAVIGATION BAR */}
       <Navbar
         currentPage={currentPage}
         onNavigate={handleNavigate}
@@ -479,8 +475,8 @@ export default function App() {
         onOpenTrackOrder={() => setIsTrackingModalOpen(true)}
       />
 
-      {/* CONTINUOUSLY MOVING STREETWEAR SLOGAN BAR */}
-      <MovingSloganBar />
+      {/* 2. BLACK COLOR RUNNING SLOGAN BAR (Placed below top navigation / dashboard header) */}
+      <MovingSloganBar messages={settings.announcementMessages} />
 
       {/* 3. ACTIVE MAIN VIEW */}
       <main className="flex-1">

@@ -35,7 +35,14 @@ export const AdminTeamTab: React.FC<AdminTeamTabProps> = ({ currentAdmin, token 
       });
       if (res.ok) {
         const data = await res.json();
-        setAdmins(data);
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.admins)
+          ? data.admins
+          : [];
+        setAdmins(list);
+      } else {
+        console.warn('Failed to fetch admin list with status:', res.status);
       }
     } catch (err) {
       console.error('Failed to fetch admin list:', err);
@@ -267,72 +274,80 @@ export const AdminTeamTab: React.FC<AdminTeamTabProps> = ({ currentAdmin, token 
 
       {/* Roster of Active Administrators */}
       <div className="space-y-4">
-        <h3 className="text-sm font-bold uppercase font-mono tracking-wider text-zinc-600">
-          Current Atelier Administrators ({admins.length})
-        </h3>
+        {(() => {
+          const adminList = Array.isArray(admins) ? admins : [];
+          return (
+            <>
+              <h3 className="text-sm font-bold uppercase font-mono tracking-wider text-zinc-600">
+                Current Atelier Administrators ({adminList.length})
+              </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {admins.map((adm) => {
-            const isSelf = adm.username === currentAdmin?.username;
-            const isPrim = adm.isAdmin1 || adm.username === 'rohithsharma';
-            const isAdmin2 = adm.username === 'ranjithkumar';
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {adminList.map((adm) => {
+                  const isSelf = adm.username === currentAdmin?.username;
+                  const isPrim = adm.isAdmin1 || adm.username === 'rohithsharma';
+                  const isAdmin2 = adm.username === 'ranjithkumar';
 
-            return (
-              <div
-                key={adm.id}
-                className={`p-5 rounded-2xl border transition-all space-y-3 ${
-                  isPrim
-                    ? 'bg-purple-50/50 border-purple-200 shadow-sm'
-                    : isAdmin2
-                    ? 'bg-white border-purple-200 shadow-sm'
-                    : 'bg-white border-zinc-200 shadow-sm'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-zinc-950">{adm.name}</span>
-                      {isPrim && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#7c3aed] text-white text-[10px] font-mono font-bold uppercase tracking-wider">
-                          Admin 1
-                        </span>
-                      )}
-                      {isAdmin2 && (
-                        <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-mono font-bold uppercase tracking-wider border border-purple-200">
-                          Admin 2
-                        </span>
-                      )}
-                      {isSelf && (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-mono">
-                          You
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs font-mono text-purple-700">@{adm.username}</div>
-                    <div className="text-xs text-zinc-500 font-mono">{adm.role}</div>
-                  </div>
-
-                  {isAdmin1 && !isPrim && (
-                    <button
-                      onClick={() => handleDeleteAdmin(adm.id, adm.name)}
-                      className="p-2 text-zinc-400 hover:text-red-600 hover:bg-zinc-100 rounded-lg transition-colors"
-                      title="Remove administrator"
+                  return (
+                    <div
+                      key={adm.id}
+                      className={`p-5 rounded-2xl border transition-all space-y-3 ${
+                        isPrim
+                          ? 'bg-purple-50/50 border-purple-200 shadow-sm'
+                          : isAdmin2
+                          ? 'bg-white border-purple-200 shadow-sm'
+                          : 'bg-white border-zinc-200 shadow-sm'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-zinc-950">{adm.name}</span>
+                            {isPrim && (
+                              <span className="px-2 py-0.5 rounded-full bg-[#7c3aed] text-white text-[10px] font-mono font-bold uppercase tracking-wider">
+                                Admin 1
+                              </span>
+                            )}
+                            {isAdmin2 && (
+                              <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-mono font-bold uppercase tracking-wider border border-purple-200">
+                                Admin 2
+                              </span>
+                            )}
+                            {isSelf && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-mono">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs font-mono text-purple-700">@{adm.username}</div>
+                          <div className="text-xs text-zinc-500 font-mono">{adm.role}</div>
+                        </div>
 
-                <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] font-mono text-zinc-500">
-                  <span>Administrator ID: {adm.id}</span>
-                  {adm.lastLogin && (
-                    <span>Last Login: {new Date(adm.lastLogin).toLocaleDateString('en-IN')}</span>
-                  )}
-                </div>
+                        {isAdmin1 && !isPrim && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAdmin(adm.id, adm.name)}
+                            className="p-2 text-zinc-400 hover:text-red-600 hover:bg-zinc-100 rounded-lg transition-colors"
+                            title="Remove administrator"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                        <span>Administrator ID: {adm.id}</span>
+                        {adm.lastLogin && (
+                          <span>Last Login: {new Date(adm.lastLogin).toLocaleDateString('en-IN')}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

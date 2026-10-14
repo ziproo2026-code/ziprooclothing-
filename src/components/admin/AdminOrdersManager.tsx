@@ -97,26 +97,30 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
   };
 
   const [isTestingSms, setIsTestingSms] = useState(false);
+  const [testSmsMobile, setTestSmsMobile] = useState('');
+  const [showSmsModal, setShowSmsModal] = useState(false);
 
-  const handleTestMsg91Sms = async () => {
+  const handleTestSms = async (targetPhone?: string) => {
     setIsTestingSms(true);
+    const phoneToSend = (targetPhone || testSmsMobile || '9876543210').trim();
     try {
-      const res = await fetch('/api/admin/test-msg91-sms', {
+      const res = await fetch('/api/admin/test-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ mobileNumber: '9876543210' }),
+        body: JSON.stringify({ mobileNumber: phoneToSend }),
       });
       const data = await res.json();
       if (data.success) {
-        showFeedback('success', 'MSG91 test SMS delivered successfully!');
+        showFeedback('success', `${data.provider || 'SMS'} test message sent successfully to ${phoneToSend}!`);
+        setShowSmsModal(false);
       } else {
-        showFeedback('error', data.error || data.message || 'MSG91 SMS test reported issue');
+        showFeedback('error', data.error || data.message || 'SMS test reported an issue');
       }
     } catch (err: any) {
-      showFeedback('error', err.message || 'Failed connecting to MSG91 test endpoint');
+      showFeedback('error', err.message || 'Failed connecting to SMS test endpoint');
     } finally {
       setIsTestingSms(false);
     }
@@ -381,15 +385,92 @@ export const AdminOrdersManager: React.FC<AdminOrdersManagerProps> = ({
 
           <button
             type="button"
-            onClick={handleTestMsg91Sms}
+            onClick={() => setShowSmsModal(true)}
             disabled={isTestingSms}
             className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-mono font-bold uppercase transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
           >
             {isTestingSms ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Smartphone className="w-3.5 h-3.5 text-purple-400" />}
-            <span>Test MSG91 SMS</span>
+            <span>Test SMS Gateway</span>
           </button>
         </div>
       </div>
+
+      {/* SMS Gateway Test Modal */}
+      {showSmsModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-zinc-200 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-100 text-[#7c3aed] flex items-center justify-center">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-zinc-950 font-display uppercase tracking-wide">
+                    Test SMS Gateway
+                  </h3>
+                  <p className="text-[11px] text-zinc-500">
+                    Sends a live order notification test message
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSmsModal(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-mono uppercase text-zinc-600 font-bold mb-1">
+                  Recipient Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={testSmsMobile}
+                  onChange={(e) => setTestSmsMobile(e.target.value)}
+                  placeholder="e.g. 9876543210 (10-digit mobile number)"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl text-zinc-900 text-xs font-mono focus:outline-none focus:border-[#7c3aed] focus:bg-white"
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  Leave blank to test with default atelier test number (9876543210).
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-900 text-[11px] space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#7c3aed]" />
+                  <span>Configured via Server Environment Secret:</span>
+                </div>
+                <p className="text-zinc-600 font-mono text-[10px]">
+                  Loaded from secret <code className="text-[#7c3aed] bg-purple-100 px-1 rounded">zipsms</code> (Textbee API Gateway)
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSmsModal(false)}
+                className="px-4 py-2 text-xs text-zinc-600 hover:text-zinc-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTestSms()}
+                disabled={isTestingSms}
+                className="px-4 py-2 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-xl text-xs font-bold uppercase font-mono flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                {isTestingSms ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                <span>{isTestingSms ? 'Sending Test SMS...' : 'Send Test SMS'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-2xl bg-white border border-zinc-200 space-y-3 shadow-xs">

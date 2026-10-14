@@ -43,15 +43,34 @@ export const HomePage: React.FC<HomePageProps> = ({
     }
   };
 
-  const introVideoUrl = settings?.introVideoUrl || '/intro_video.mp4';
+  // Video URL resolution: prioritize stored settings, then active intro video, fallback to default
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string>(() => {
+    return settings?.introVideoUrl || '/intro_video.mp4';
+  });
+
+  useEffect(() => {
+    if (settings?.introVideoUrl) {
+      setActiveVideoUrl(settings.introVideoUrl);
+    } else {
+      // Query server public active video
+      fetch('/api/public/active-intro-video')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.videoUrl) {
+            setActiveVideoUrl(data.videoUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [settings?.introVideoUrl]);
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-zinc-900">
       {/* 0. Fullscreen Cinematic Brand Intro Video (The Only Website Intro Video) */}
       <IntroVideoExperience
-        isOpen={showIntro}
+        isOpen={showIntro && settings?.introVideoEnabled !== false}
         onComplete={handleIntroComplete}
-        videoUrl={introVideoUrl}
+        videoUrl={activeVideoUrl}
       />
 
       {/* 1. HERO SECTION - Clean, Minimal & Prominent "CREATE YOUR IDENTITY" */}
